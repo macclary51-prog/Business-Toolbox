@@ -313,8 +313,39 @@ function renderOwnerDashboard(){
   $("ownerStatActiveSub").textContent=ownerBusinesses.length?`${Math.round((active/ownerBusinesses.length)*100)}% of businesses`:"No customers yet";
   $("ownerStatRevenueSub").textContent=`$0.99 × ${active} active account${active===1?"":"s"}`;
 
+  renderOwnerTools();
   renderOwnerBusinesses();
 }
+function renderOwnerTools(){
+  const q=($("ownerToolSearch")?.value||"").trim().toLowerCase();
+  const filtered=toolDefinitions.filter(t=>{
+    const text=`${t.name||""} ${t.category||""} ${t.desc||""}`.toLowerCase();
+    return !q || text.includes(q);
+  });
+
+  if($("ownerToolSummary")){
+    $("ownerToolSummary").textContent=`${filtered.length} tool${filtered.length===1?"":"s"} shown`;
+  }
+  if(!$("ownerToolsGrid"))return;
+
+  $("ownerToolsGrid").innerHTML=filtered.map(t=>{
+    const enabledCount=ownerBusinesses.filter(b=>Array.isArray(b.enabledModules)&&b.enabledModules.includes(t.id)).length;
+    const percent=ownerBusinesses.length ? Math.round((enabledCount/ownerBusinesses.length)*100) : 0;
+    return `<article class="owner-tool-card">
+      <div class="owner-tool-card-top">
+        <span class="owner-tool-card-icon">${safeText(t.icon)}</span>
+        <span class="owner-tool-card-category">${safeText(t.category)}</span>
+      </div>
+      <h4>${safeText(t.name)}</h4>
+      <p>${safeText(t.desc)}</p>
+      <div class="owner-tool-usage">
+        <span>Enabled by</span>
+        <strong>${enabledCount} business${enabledCount===1?"":"es"} (${percent}%)</strong>
+      </div>
+    </article>`;
+  }).join("") || '<div class="empty-state">No tools match your search.</div>';
+}
+
 function ownerStatusClass(value=""){return String(value).toLowerCase().replaceAll(" ","_")}
 function renderOwnerBusinesses(){
   const q=($("ownerBusinessSearch").value||"").trim().toLowerCase();
@@ -476,6 +507,7 @@ $("ownerDetailToggleAccess").addEventListener("click",async()=>{
   await openOwnerBusinessDetails(ownerDetailBusinessId);
 });
 
+$("ownerToolSearch").addEventListener("input",renderOwnerTools);
 $("ownerBusinessSearch").addEventListener("input",renderOwnerBusinesses);
 $("ownerSubscriptionFilter").addEventListener("change",renderOwnerBusinesses);
 $("ownerAccessFilter").addEventListener("change",renderOwnerBusinesses);
