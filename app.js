@@ -263,49 +263,228 @@ function showOwnerApp(){
   $("ownerEmail").textContent=currentUser.email||currentPlatformAdmin.email||"";
   renderOwnerDashboard();
 }
+
+function timestampToDate(value){
+  if(!value) return null;
+  if(typeof value.toDate==="function") return value.toDate();
+  if(value.seconds) return new Date(value.seconds*1000);
+  const d=new Date(value); return Number.isNaN(d.getTime())?null:d;
+}
+function formatOwnerDate(value){
+  const d=timestampToDate(value);
+  return d ? d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}) : "Not available";
+}
+function formatOwnerDateTime(value){
+  const d=timestampToDate(value);
+  return d ? d.toLocaleString(undefined,{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "Not available";
+}
 function renderOwnerDashboard(){
+  const now=new Date();
+  const sevenDaysAgo=new Date(now); sevenDaysAgo.setDate(now.getDate()-7);
+  const thirtyDaysAgo=new Date(now); thirtyDaysAgo.setDate(now.getDate()-30);
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+
   const active=ownerBusinesses.filter(b=>b.subscriptionStatus==="active").length;
   const setup=ownerBusinesses.filter(b=>(b.subscriptionStatus||"setup_required")==="setup_required").length;
+  const pastDue=ownerBusinesses.filter(b=>b.subscriptionStatus==="past_due").length;
+  const canceled=ownerBusinesses.filter(b=>b.subscriptionStatus==="canceled").length;
+  const suspended=ownerBusinesses.filter(b=>(b.platformStatus||"active")==="suspended").length;
+  const last7=ownerBusinesses.filter(b=>{const d=timestampToDate(b.createdAt);return d&&d>=sevenDaysAgo;}).length;
+  const last30=ownerBusinesses.filter(b=>{const d=timestampToDate(b.createdAt);return d&&d>=thirtyDaysAgo;}).length;
+  const thisMonth=ownerBusinesses.filter(b=>{const d=timestampToDate(b.createdAt);return d&&d>=monthStart;}).length;
+  const avgTools=ownerBusinesses.length
+    ? ownerBusinesses.reduce((sum,b)=>sum+(Array.isArray(b.enabledModules)?b.enabledModules.length:0),0)/ownerBusinesses.length
+    : 0;
+  const mrr=active*.99;
+
   $("ownerStatBusinesses").textContent=ownerBusinesses.length;
   $("ownerStatActive").textContent=active;
   $("ownerStatSetup").textContent=setup;
-  $("ownerStatRevenue").textContent=`$${(active*.99).toFixed(2)}`;
+  $("ownerStatPastDue").textContent=pastDue;
+  $("ownerStatCanceled").textContent=canceled;
+  $("ownerStatSuspended").textContent=suspended;
+  $("ownerStat7Days").textContent=last7;
+  $("ownerStat30Days").textContent=last30;
+  $("ownerStatThisMonth").textContent=thisMonth;
+  $("ownerStatAvgTools").textContent=avgTools.toFixed(1);
+  $("ownerStatRevenue").textContent=`$${mrr.toFixed(2)}`;
+  $("ownerStatAnnual").textContent=`$${(mrr*12).toFixed(2)}`;
+  $("ownerStatBusinessesSub").textContent=`${active} active • ${suspended} suspended`;
+  $("ownerStatActiveSub").textContent=ownerBusinesses.length?`${Math.round((active/ownerBusinesses.length)*100)}% of businesses`:"No customers yet";
+  $("ownerStatRevenueSub").textContent=`$0.99 × ${active} active account${active===1?"":"s"}`;
+
   renderOwnerBusinesses();
 }
 function ownerStatusClass(value=""){return String(value).toLowerCase().replaceAll(" ","_")}
 function renderOwnerBusinesses(){
   const q=($("ownerBusinessSearch").value||"").trim().toLowerCase();
-  const filtered=ownerBusinesses.filter(b=>!q||`${b.name||""} ${b.ownerName||""} ${b.website||""} ${b.subscriptionStatus||""}`.toLowerCase().includes(q));
+  const subscriptionFilter=$("ownerSubscriptionFilter")?.value||"all";
+  const accessFilter=$("ownerAccessFilter")?.value||"all";
+
+  const filtered=ownerBusinesses.filter(b=>{
+    const text=`${b.name||""} ${b.ownerName||""} ${b.website||""} ${b.phone||""} ${b.subscriptionStatus||""} ${b.id||""}`.toLowerCase();
+    const subscription=b.subscriptionStatus||"setup_required";
+    const access=b.platformStatus||"active";
+    return (!q||text.includes(q))
+      && (subscriptionFilter==="all"||subscription===subscriptionFilter)
+      && (accessFilter==="all"||access===accessFilter);
+  });
+
+  $("ownerResultCount").textContent=`${filtered.length} business${filtered.length===1?"":"es"}`;
   $("ownerBusinessList").innerHTML=filtered.length?filtered.map(b=>{
     const subscription=b.subscriptionStatus||"setup_required";
     const access=b.platformStatus||"active";
-    return `<div class="owner-business-row">
-      <div class="owner-business-main"><strong>${safeText(b.name||"Unnamed Business")}</strong><span>${safeText(b.ownerName||"No owner name")}</span></div>
-      <div class="owner-business-meta"><strong>Subscription</strong><span class="owner-status ${ownerStatusClass(subscription)}">${safeText(subscription.replaceAll("_"," "))}</span></div>
-      <div class="owner-business-meta"><strong>Platform Access</strong><span class="owner-status ${ownerStatusClass(access)}">${safeText(access)}</span></div>
+    const tools=Array.isArray(b.enabledModules)?b.enabledModules.length:0;
+    return `<div class="owner-business-row detailed">
+      <div class="owner-business-main">
+        <strong>${safeText(b.name||"Unnamed Business")}</strong>
+        <span>${safeText(b.ownerName||"No owner name")}</span>
+        <div class="owner-business-contact">
+          ${b.phone?`<span>${safeText(b.phone)}</span>`:""}
+          ${b.website?`<span>${safeText(b.website)}</span>`:""}
+          <span class="owner-business-id">ID: ${safeText(b.id)}</span>
+        </div>
+      </div>
+      <div class="owner-business-meta">
+        <strong>Toolbox Usage</strong>
+        <span class="owner-tool-count">${tools} enabled tool${tools===1?"":"s"}</span>
+        <span class="owner-date">Joined ${safeText(formatOwnerDate(b.createdAt))}</span>
+      </div>
+      <div class="owner-business-meta">
+        <strong>Subscription</strong>
+        <span class="owner-status ${ownerStatusClass(subscription)}">${safeText(subscription.replaceAll("_"," "))}</span>
+        <span>Plan: ${safeText(b.plan||"starter")}</span>
+      </div>
+      <div class="owner-business-meta">
+        <strong>Platform Access</strong>
+        <span class="owner-status ${ownerStatusClass(access)}">${safeText(access)}</span>
+        <span>Updated ${safeText(formatOwnerDate(b.updatedAt))}</span>
+      </div>
       <div class="owner-actions">
+        <button class="mini-btn view-details-btn" data-owner-view="${b.id}">View Details</button>
         <select class="input" data-owner-subscription="${b.id}" aria-label="Subscription status for ${safeText(b.name||"business")}">
           ${["setup_required","active","past_due","canceled"].map(v=>`<option value="${v}" ${v===subscription?"selected":""}>${v.replaceAll("_"," ")}</option>`).join("")}
         </select>
         <button class="mini-btn ${access==="suspended"?"":"danger"}" data-owner-access="${b.id}" data-next-access="${access==="suspended"?"active":"suspended"}">${access==="suspended"?"Restore Access":"Suspend Access"}</button>
       </div>
     </div>`;
-  }).join(""):'<div class="empty-state">No business accounts match this search.</div>';
+  }).join(""):'<div class="empty-state">No business accounts match the current filters.</div>';
 
+  document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.onclick=()=>openOwnerBusinessDetails(btn.dataset.ownerView));
   document.querySelectorAll("[data-owner-subscription]").forEach(select=>select.onchange=async()=>{
     const id=select.dataset.ownerSubscription;
     await updateDoc(doc(db,"businesses",id),{subscriptionStatus:select.value,updatedAt:serverTimestamp()});
-    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.subscriptionStatus=select.value;renderOwnerDashboard();
+    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.subscriptionStatus=select.value;
+    renderOwnerDashboard();
   });
   document.querySelectorAll("[data-owner-access]").forEach(btn=>btn.onclick=async()=>{
     const id=btn.dataset.ownerAccess,next=btn.dataset.nextAccess;
     const label=next==="suspended"?"Suspend this business's platform access?":"Restore this business's platform access?";
     if(!confirm(label))return;
     await updateDoc(doc(db,"businesses",id),{platformStatus:next,updatedAt:serverTimestamp()});
-    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.platformStatus=next;renderOwnerDashboard();
+    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.platformStatus=next;
+    renderOwnerDashboard();
   });
 }
+
+let ownerDetailBusinessId=null;
+async function openOwnerBusinessDetails(id){
+  const b=ownerBusinesses.find(item=>item.id===id);
+  if(!b)return;
+  ownerDetailBusinessId=id;
+  const access=b.platformStatus||"active";
+  const subscription=b.subscriptionStatus||"setup_required";
+  const tools=Array.isArray(b.enabledModules)?b.enabledModules:[];
+
+  $("ownerBusinessModalTitle").textContent=b.name||"Unnamed Business";
+  $("ownerBusinessModalSubtitle").textContent=b.ownerName?`Owned by ${b.ownerName}`:"Business account";
+  $("ownerDetailAccessBadge").textContent=access;
+  $("ownerDetailAccessBadge").className=`owner-status ${ownerStatusClass(access)}`;
+  $("ownerDetailSubscription").value=subscription;
+  $("ownerDetailToggleAccess").textContent=access==="suspended"?"Restore Access":"Suspend Access";
+  $("ownerDetailToggleAccess").className=`btn ${access==="suspended"?"btn-secondary":"btn-ghost"}`;
+
+  const businessInfo=[
+    ["Business ID",b.id],
+    ["Business Name",b.name||"Not set"],
+    ["Owner Name",b.ownerName||"Not set"],
+    ["Owner UID",b.ownerUid||"Not available"],
+    ["Phone",b.phone||"Not set"],
+    ["Website",b.website||"Not set"]
+  ];
+  $("ownerDetailBusinessInfo").innerHTML=businessInfo.map(([k,v])=>`<div class="owner-detail-item"><span>${safeText(k)}</span><strong>${safeText(v)}</strong></div>`).join("");
+
+  const accountInfo=[
+    ["Plan",b.plan||"starter"],
+    ["Subscription",subscription.replaceAll("_"," ")],
+    ["Platform Access",access],
+    ["Created",formatOwnerDateTime(b.createdAt)],
+    ["Last Updated",formatOwnerDateTime(b.updatedAt)],
+    ["Enabled Tools",String(tools.length)]
+  ];
+  $("ownerDetailAccountInfo").innerHTML=accountInfo.map(([k,v])=>`<div class="owner-detail-item"><span>${safeText(k)}</span><strong>${safeText(v)}</strong></div>`).join("");
+
+  $("ownerDetailToolCount").textContent=`${tools.length} enabled`;
+  $("ownerDetailTools").innerHTML=tools.length
+    ? tools.map(id=>{const t=toolById(id);return `<span class="owner-detail-tool">${safeText(t.icon)} ${safeText(t.name)}</span>`}).join("")
+    : '<span class="owner-detail-tool">No tools enabled</span>';
+
+  $("ownerDetailRecordCount").textContent="Loading records...";
+  $("ownerDetailActivity").innerHTML='<div class="empty-state">Loading toolbox activity...</div>';
+  $("ownerBusinessModal").classList.remove("hidden");
+
+  try{
+    const snap=await getDocs(collection(db,"businesses",id,"records"));
+    const detailRecords=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
+      const at=a.createdAt?.seconds||a.updatedAt?.seconds||0;
+      const bt=b.createdAt?.seconds||b.updatedAt?.seconds||0;
+      return bt-at;
+    });
+    $("ownerDetailRecordCount").textContent=`${detailRecords.length} total record${detailRecords.length===1?"":"s"}`;
+    $("ownerDetailActivity").innerHTML=detailRecords.length
+      ? detailRecords.slice(0,8).map(r=>{
+          const t=toolById(r.module);
+          return `<div class="owner-activity-row"><div><strong>${safeText(r.title||"Untitled")}</strong><span>${safeText(t.name)} • ${safeText(r.status||"Open")}</span></div><span>${safeText(formatOwnerDate(r.updatedAt||r.createdAt))}</span></div>`;
+        }).join("")
+      : '<div class="empty-state">This business has not created any toolbox records yet.</div>';
+  }catch(error){
+    console.error(error);
+    $("ownerDetailRecordCount").textContent="Could not load records";
+    $("ownerDetailActivity").innerHTML='<div class="empty-state">Record activity could not be loaded. Check owner Firestore permissions.</div>';
+  }
+}
+
+document.querySelectorAll("[data-close-owner-business]").forEach(btn=>btn.addEventListener("click",()=>$("ownerBusinessModal").classList.add("hidden")));
+$("ownerBusinessModal").addEventListener("click",e=>{if(e.target===$("ownerBusinessModal"))$("ownerBusinessModal").classList.add("hidden")});
+$("ownerDetailSaveSubscription").addEventListener("click",async()=>{
+  if(!ownerDetailBusinessId)return;
+  const value=$("ownerDetailSubscription").value;
+  await updateDoc(doc(db,"businesses",ownerDetailBusinessId),{subscriptionStatus:value,updatedAt:serverTimestamp()});
+  const found=ownerBusinesses.find(b=>b.id===ownerDetailBusinessId);if(found)found.subscriptionStatus=value;
+  renderOwnerDashboard();
+  await openOwnerBusinessDetails(ownerDetailBusinessId);
+});
+$("ownerDetailToggleAccess").addEventListener("click",async()=>{
+  if(!ownerDetailBusinessId)return;
+  const found=ownerBusinesses.find(b=>b.id===ownerDetailBusinessId);if(!found)return;
+  const current=found.platformStatus||"active";
+  const next=current==="suspended"?"active":"suspended";
+  if(!confirm(next==="suspended"?"Suspend this business's platform access?":"Restore this business's platform access?"))return;
+  await updateDoc(doc(db,"businesses",ownerDetailBusinessId),{platformStatus:next,updatedAt:serverTimestamp()});
+  found.platformStatus=next;
+  renderOwnerDashboard();
+  await openOwnerBusinessDetails(ownerDetailBusinessId);
+});
+
 $("ownerBusinessSearch").addEventListener("input",renderOwnerBusinesses);
+$("ownerSubscriptionFilter").addEventListener("change",renderOwnerBusinesses);
+$("ownerAccessFilter").addEventListener("change",renderOwnerBusinesses);
+$("ownerRefreshBtn").addEventListener("click",async()=>{
+  $("ownerRefreshBtn").disabled=true;
+  $("ownerRefreshBtn").textContent="Refreshing...";
+  try{await loadOwnerBusinesses();renderOwnerDashboard();}
+  finally{$("ownerRefreshBtn").disabled=false;$("ownerRefreshBtn").textContent="Refresh Data";}
+});
 $("ownerLogoutBtn").addEventListener("click",()=>signOut(auth));
 
 async function loadRecords(){const ref=collection(db,"businesses",userProfile.businessId,"records");const snap=await getDocs(query(ref,orderBy("createdAt","desc")));records=snap.docs.map(d=>({id:d.id,...d.data()}));}
