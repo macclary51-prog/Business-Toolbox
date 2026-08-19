@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Silverforge Business Toolbox — simple business operations tools for small businesses." />
+  <meta name="description" content="Silverforge Business Toolbox — practical business operations tools for small businesses." />
   <title>Silverforge Business Toolbox</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,11 +17,10 @@
         <span class="brand-mark">SF</span>
         <span class="brand-text">Silverforge <strong>Business Toolbox</strong></span>
       </a>
-
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
-
       <nav class="nav-links" id="navLinks">
         <a href="#features">Features</a>
+        <a href="#business-types">Business Examples</a>
         <a href="#how-it-works">How It Works</a>
         <a href="#pricing">Pricing</a>
         <button class="btn btn-ghost" data-open-auth="login">Log In</button>
@@ -34,43 +33,26 @@
     <section class="hero section">
       <div class="container hero-grid">
         <div>
-          <span class="eyebrow">ONE SMALL TOOLBOX. LOTS OF BUSINESS USES.</span>
-          <h1>Keep the little things from becoming big problems.</h1>
-          <p class="hero-copy">
-            Track tasks, equipment, renewals, incidents, photos, vendors, employees and more in one simple business dashboard.
-          </p>
+          <span class="eyebrow">ONE TOOLBOX. YOUR BUSINESS. YOUR TOOLS.</span>
+          <h1>Keep everyday business operations organized.</h1>
+          <p class="hero-copy">Choose the tools your company actually needs. Track tasks, equipment, maintenance, renewals, incidents, handoffs, checklists and more from one simple dashboard.</p>
           <div class="hero-actions">
             <button class="btn btn-primary btn-large" data-open-auth="signup">Create Your Business Account</button>
-            <a class="btn btn-secondary btn-large" href="#features">See the Tools</a>
+            <a class="btn btn-secondary btn-large" href="#features">Explore the Tools</a>
           </div>
           <div class="hero-points">
-            <span>✓ Works in a browser</span>
-            <span>✓ Mobile friendly</span>
-            <span>✓ Built for small businesses</span>
+            <span>✓ Browser based</span><span>✓ Mobile friendly</span><span>✓ Turn tools on or off</span><span>✓ Built for small businesses</span>
           </div>
         </div>
-
-        <div class="dashboard-preview" aria-label="Dashboard preview">
-          <div class="preview-topbar">
-            <span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span>
-          </div>
+        <div class="dashboard-preview" aria-label="Business Toolbox dashboard preview">
+          <div class="preview-topbar"><span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span></div>
           <div class="preview-content">
-            <div class="preview-heading">
-              <div>
-                <small>GOOD MORNING</small>
-                <h3>Business Dashboard</h3>
-              </div>
-              <span class="status-pill">All systems ready</span>
-            </div>
+            <div class="preview-heading"><div><small>TODAY</small><h3>Business Dashboard</h3></div><span class="status-pill">8 tools active</span></div>
             <div class="preview-stats">
-              <div><strong>6</strong><span>Open tasks</span></div>
-              <div><strong>2</strong><span>Due soon</span></div>
-              <div><strong>18</strong><span>Assets</span></div>
-              <div><strong>1</strong><span>Issue</span></div>
+              <div><strong>6</strong><span>Open tasks</span></div><div><strong>2</strong><span>Due soon</span></div><div><strong>18</strong><span>Assets</span></div><div><strong>1</strong><span>Issue</span></div>
             </div>
             <div class="preview-tools">
-              <div>✓ Tasks</div><div>⚙ Equipment</div><div>↻ Renewals</div><div>! Incidents</div>
-              <div>▣ Photo Proof</div><div>◇ Vendors</div><div>☰ Logbook</div><div>⌁ Vehicles</div>
+              <div>✓ Tasks</div><div>☑ Checklists</div><div>⚙ Equipment</div><div>⌂ Maintenance</div><div>↻ Renewals</div><div>! Incidents</div><div>⇄ Shift Handoff</div><div>↗ Asset Checkout</div>
             </div>
           </div>
         </div>
@@ -81,45 +63,59 @@
       <div class="container">
         <div class="section-heading">
           <span class="eyebrow">BUSINESS TOOLBOX</span>
-          <h2>Use only the tools your business needs.</h2>
-          <p>Turn modules on or off so the dashboard stays simple.</p>
+          <h2>Find the tools that fit your business.</h2>
+          <p>Search the toolbox or filter by category. Select a tool to see exactly what it tracks.</p>
         </div>
-        <div class="feature-grid" id="publicFeatureGrid"></div>
+        <div class="feature-controls">
+          <div class="feature-search-wrap"><span>⌕</span><input id="featureSearch" class="feature-search" type="search" placeholder="Search tools, equipment, employees, renewals..." /></div>
+          <div class="category-pills" id="featureCategories"></div>
+        </div>
+        <div class="feature-layout">
+          <div class="feature-grid" id="publicFeatureGrid"></div>
+          <aside class="feature-detail" id="featureDetail">
+            <span class="detail-icon" id="detailIcon">✓</span>
+            <span class="eyebrow" id="detailCategory">OPERATIONS</span>
+            <h3 id="detailName">Tasks</h3>
+            <p id="detailDescription">Track work that needs to get done.</p>
+            <ul id="detailBullets"></ul>
+            <button class="btn btn-primary full" data-open-auth="signup">Use This Tool</button>
+          </aside>
+        </div>
       </div>
     </section>
 
-    <section class="section" id="how-it-works">
+    <section class="section" id="business-types">
       <div class="container">
         <div class="section-heading">
-          <span class="eyebrow">HOW IT WORKS</span>
-          <h2>Built to be easy from day one.</h2>
+          <span class="eyebrow">BUILT FOR DIFFERENT BUSINESSES</span>
+          <h2>The same toolbox can work differently for every company.</h2>
+          <p>Select a business type to see a useful starting set of tools.</p>
         </div>
+        <div class="business-example-tabs" id="businessExampleTabs"></div>
+        <div class="business-example-panel" id="businessExamplePanel"></div>
+      </div>
+    </section>
+
+    <section class="section muted-section" id="how-it-works">
+      <div class="container">
+        <div class="section-heading"><span class="eyebrow">HOW IT WORKS</span><h2>Simple enough to start in minutes.</h2></div>
         <div class="steps-grid">
-          <article class="step-card"><span>1</span><h3>Create your account</h3><p>Set up your business profile with email and password.</p></article>
-          <article class="step-card"><span>2</span><h3>Choose your tools</h3><p>Enable the modules that make sense for your business.</p></article>
-          <article class="step-card"><span>3</span><h3>Run your day</h3><p>Add tasks, records, maintenance items, incidents and more from one dashboard.</p></article>
+          <article class="step-card"><span>1</span><h3>Create your business account</h3><p>Set up one workspace for your company.</p></article>
+          <article class="step-card"><span>2</span><h3>Choose your tools</h3><p>Enable only the modules your business wants to use.</p></article>
+          <article class="step-card"><span>3</span><h3>Run your day</h3><p>Use purpose-built forms instead of forcing every job into a generic note.</p></article>
         </div>
       </div>
     </section>
 
     <section class="section pricing-section" id="pricing">
       <div class="container pricing-wrap">
-        <div>
-          <span class="eyebrow">SIMPLE PRICING</span>
-          <h2>Less than one dollar a month.</h2>
-          <p>Start with one simple plan for small businesses. Advanced storage-heavy features can be added later without changing the core product.</p>
-        </div>
+        <div><span class="eyebrow">SIMPLE PRICING</span><h2>Useful business tools for 99¢ a month.</h2><p>One affordable toolbox with modules businesses can turn on and off as they need them.</p></div>
         <article class="pricing-card">
           <span class="pricing-label">BUSINESS TOOLBOX</span>
           <div class="price"><strong>$0.99</strong><span>/ month</span></div>
-          <ul>
-            <li>Business dashboard</li>
-            <li>Core business modules</li>
-            <li>Mobile-friendly website</li>
-            <li>Your business data kept separate</li>
-          </ul>
+          <ul><li>Business dashboard</li><li>Tool-specific business modules</li><li>Mobile-friendly website</li><li>Customizable active tools</li><li>Business data separated by account</li></ul>
           <button class="btn btn-primary btn-large full" data-open-auth="signup">Create Account</button>
-          <small>Payment processing is the next integration step.</small>
+          <small>Subscription checkout can be connected after the website features are finished.</small>
         </article>
       </div>
     </section>
@@ -127,15 +123,8 @@
 
   <section class="app-shell hidden" id="appShell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand sidebar-brand" href="#">
-        <span class="brand-mark">SF</span>
-        <span class="brand-text">Business <strong>Toolbox</strong></span>
-      </a>
-      <div class="business-block">
-        <small>BUSINESS</small>
-        <strong id="sidebarBusinessName">Loading...</strong>
-        <span id="sidebarUserEmail"></span>
-      </div>
+      <a class="brand sidebar-brand" href="#"><span class="brand-mark">SF</span><span class="brand-text">Business <strong>Toolbox</strong></span></a>
+      <div class="business-block"><small>BUSINESS</small><strong id="sidebarBusinessName">Loading...</strong><span id="sidebarUserEmail"></span></div>
       <nav class="sidebar-nav">
         <button class="side-link active" data-view="dashboard"><span>⌂</span> Dashboard</button>
         <button class="side-link" data-view="tools"><span>▦</span> Tools</button>
@@ -146,66 +135,15 @@
     </aside>
 
     <div class="app-main">
-      <header class="app-topbar">
-        <button class="icon-btn" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
-        <div>
-          <small id="viewEyebrow">OVERVIEW</small>
-          <h2 id="viewTitle">Dashboard</h2>
-        </div>
-        <button class="btn btn-primary" id="quickAddBtn">+ Add Record</button>
-      </header>
-
+      <header class="app-topbar"><button class="icon-btn" id="sidebarToggle" aria-label="Toggle sidebar">☰</button><div><small id="viewEyebrow">OVERVIEW</small><h2 id="viewTitle">Dashboard</h2></div><button class="btn btn-primary" id="quickAddBtn">+ Add</button></header>
       <div class="app-content">
         <section class="app-view" id="dashboardView">
-          <div class="stats-grid">
-            <article class="stat-card"><span>Open Records</span><strong id="statOpen">0</strong></article>
-            <article class="stat-card"><span>Due Soon</span><strong id="statDue">0</strong></article>
-            <article class="stat-card"><span>Active Tools</span><strong id="statTools">0</strong></article>
-            <article class="stat-card"><span>Total Records</span><strong id="statTotal">0</strong></article>
-          </div>
-          <div class="app-grid-two">
-            <article class="panel">
-              <div class="panel-heading"><div><small>QUICK ACCESS</small><h3>Your Tools</h3></div><button class="text-btn" data-go-tools>Manage</button></div>
-              <div class="tool-grid" id="dashboardToolGrid"></div>
-            </article>
-            <article class="panel">
-              <div class="panel-heading"><div><small>RECENT</small><h3>Latest Records</h3></div></div>
-              <div class="record-list compact" id="recentRecords"></div>
-            </article>
-          </div>
+          <div class="stats-grid"><article class="stat-card"><span>Open Records</span><strong id="statOpen">0</strong></article><article class="stat-card"><span>Due Soon</span><strong id="statDue">0</strong></article><article class="stat-card"><span>Active Tools</span><strong id="statTools">0</strong></article><article class="stat-card"><span>Total Records</span><strong id="statTotal">0</strong></article></div>
+          <div class="app-grid-two"><article class="panel"><div class="panel-heading"><div><small>QUICK ACCESS</small><h3>Your Tools</h3></div><button class="text-btn" data-go-tools>Manage</button></div><div class="tool-grid" id="dashboardToolGrid"></div></article><article class="panel"><div class="panel-heading"><div><small>RECENT</small><h3>Latest Activity</h3></div></div><div class="record-list compact" id="recentRecords"></div></article></div>
         </section>
-
-        <section class="app-view hidden" id="toolsView">
-          <article class="panel">
-            <div class="panel-heading"><div><small>MODULES</small><h3>Choose Your Business Tools</h3></div></div>
-            <p class="panel-copy">Turn tools on or off. Disabled tools stay out of your main dashboard but their records are not deleted.</p>
-            <div class="module-settings-grid" id="moduleSettingsGrid"></div>
-          </article>
-        </section>
-
-        <section class="app-view hidden" id="recordsView">
-          <article class="panel">
-            <div class="records-toolbar">
-              <input class="input" type="search" id="recordSearch" placeholder="Search records..." />
-              <select class="input" id="recordModuleFilter"><option value="all">All tools</option></select>
-              <button class="btn btn-primary" id="addRecordBtn">+ Add Record</button>
-            </div>
-            <div class="record-list" id="allRecords"></div>
-          </article>
-        </section>
-
-        <section class="app-view hidden" id="settingsView">
-          <article class="panel settings-panel">
-            <div class="panel-heading"><div><small>BUSINESS</small><h3>Business Settings</h3></div></div>
-            <form id="businessSettingsForm" class="form-grid">
-              <label>Business Name<input class="input" id="settingsBusinessName" required /></label>
-              <label>Owner Name<input class="input" id="settingsOwnerName" /></label>
-              <label>Business Phone<input class="input" id="settingsPhone" type="tel" /></label>
-              <label>Business Website<input class="input" id="settingsWebsite" type="url" placeholder="https://" /></label>
-              <div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div>
-            </form>
-          </article>
-        </section>
+        <section class="app-view hidden" id="toolsView"><article class="panel"><div class="panel-heading"><div><small>MODULES</small><h3>Choose Your Business Tools</h3></div></div><p class="panel-copy">Turn tools on or off. Disabled tools stay out of your dashboard without deleting their records.</p><div class="module-settings-grid" id="moduleSettingsGrid"></div></article></section>
+        <section class="app-view hidden" id="recordsView"><article class="panel"><div class="records-toolbar"><input class="input" type="search" id="recordSearch" placeholder="Search records..." /><select class="input" id="recordModuleFilter"><option value="all">All tools</option></select><button class="btn btn-primary" id="addRecordBtn">+ Add</button></div><div class="record-list" id="allRecords"></div></article></section>
+        <section class="app-view hidden" id="settingsView"><article class="panel settings-panel"><div class="panel-heading"><div><small>BUSINESS</small><h3>Business Settings</h3></div></div><form id="businessSettingsForm" class="form-grid"><label>Business Name<input class="input" id="settingsBusinessName" required /></label><label>Owner Name<input class="input" id="settingsOwnerName" /></label><label>Business Phone<input class="input" id="settingsPhone" type="tel" /></label><label>Business Website<input class="input" id="settingsWebsite" type="url" placeholder="https://" /></label><div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div></form></article></section>
       </div>
     </div>
   </section>
@@ -213,58 +151,33 @@
   <div class="modal-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal auth-modal-card">
       <button class="modal-close" data-close-modal aria-label="Close">×</button>
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-auth-tab="login">Log In</button>
-        <button class="auth-tab" data-auth-tab="signup">Create Account</button>
-      </div>
-
-      <form id="loginForm" class="auth-form">
-        <span class="eyebrow">WELCOME BACK</span>
-        <h2 id="authTitle">Log in to your toolbox</h2>
-        <label>Email<input class="input" id="loginEmail" type="email" required autocomplete="email" /></label>
-        <label>Password<input class="input" id="loginPassword" type="password" required autocomplete="current-password" /></label>
-        <button class="btn btn-primary btn-large full" type="submit">Log In</button>
-      </form>
-
-      <form id="signupForm" class="auth-form hidden">
-        <span class="eyebrow">GET STARTED</span>
-        <h2>Create your business account</h2>
-        <label>Business Name<input class="input" id="signupBusinessName" required /></label>
-        <label>Your Name<input class="input" id="signupOwnerName" required /></label>
-        <label>Email<input class="input" id="signupEmail" type="email" required autocomplete="email" /></label>
-        <label>Password<input class="input" id="signupPassword" type="password" minlength="6" required autocomplete="new-password" /></label>
-        <button class="btn btn-primary btn-large full" type="submit">Create Account</button>
-        <small class="form-note">This starter creates the account. Add Stripe subscription enforcement after the website is working.</small>
-      </form>
+      <div class="auth-tabs"><button class="auth-tab active" data-auth-tab="login">Log In</button><button class="auth-tab" data-auth-tab="signup">Create Account</button></div>
+      <form id="loginForm" class="auth-form"><span class="eyebrow">WELCOME BACK</span><h2 id="authTitle">Log in to your toolbox</h2><label>Email<input class="input" id="loginEmail" type="email" required autocomplete="email" /></label><label>Password<input class="input" id="loginPassword" type="password" required autocomplete="current-password" /></label><button class="btn btn-primary btn-large full" type="submit">Log In</button></form>
+      <form id="signupForm" class="auth-form hidden"><span class="eyebrow">GET STARTED</span><h2>Create your business account</h2><label>Business Name<input class="input" id="signupBusinessName" required /></label><label>Your Name<input class="input" id="signupOwnerName" required /></label><label>Email<input class="input" id="signupEmail" type="email" required autocomplete="email" /></label><label>Password<input class="input" id="signupPassword" type="password" minlength="6" required autocomplete="new-password" /></label><button class="btn btn-primary btn-large full" type="submit">Create Account</button><small class="form-note">Authentication can be enabled when the account system is ready for testing.</small></form>
       <p class="form-message" id="authMessage"></p>
     </div>
   </div>
 
   <div class="modal-backdrop hidden" id="recordModal" role="dialog" aria-modal="true">
-    <div class="modal">
+    <div class="modal record-modal-card">
       <button class="modal-close" data-close-record aria-label="Close">×</button>
-      <span class="eyebrow">BUSINESS RECORD</span>
+      <span class="eyebrow" id="recordEyebrow">BUSINESS TOOL</span>
       <h2 id="recordModalTitle">Add Record</h2>
+      <p class="modal-helper" id="recordModalHelper"></p>
       <form id="recordForm" class="auth-form">
         <input type="hidden" id="recordId" />
         <label>Tool<select class="input" id="recordModule" required></select></label>
-        <label>Title<input class="input" id="recordTitle" required maxlength="120" /></label>
+        <div class="dynamic-fields" id="dynamicFields"></div>
         <label>Status<select class="input" id="recordStatus"><option>Open</option><option>In Progress</option><option>Complete</option><option>Archived</option></select></label>
-        <label>Due Date<input class="input" id="recordDueDate" type="date" /></label>
-        <label>Details<textarea class="input textarea" id="recordDetails" rows="5" maxlength="3000"></textarea></label>
-        <div class="form-actions split"><button class="btn btn-secondary" type="button" data-close-record>Cancel</button><button class="btn btn-primary" type="submit">Save Record</button></div>
+        <label id="dueDateLabel">Due Date<input class="input" id="recordDueDate" type="date" /></label>
+        <label>Notes<textarea class="input textarea" id="recordDetails" rows="4" maxlength="3000"></textarea></label>
+        <div class="form-actions split"><button class="btn btn-secondary" type="button" data-close-record>Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
       </form>
       <p class="form-message" id="recordMessage"></p>
     </div>
   </div>
 
-  <footer class="site-footer" id="publicFooter">
-    <div class="container footer-wrap">
-      <div><strong>Silverforge Business Toolbox</strong><p>Simple tools for small businesses.</p></div>
-      <span>© <span id="year"></span> Silverforge Digital Solutions</span>
-    </div>
-  </footer>
-
+  <footer class="site-footer" id="publicFooter"><div class="container footer-wrap"><div><strong>Silverforge Business Toolbox</strong><p>Simple tools for small businesses.</p></div><span>© <span id="year"></span> Silverforge Digital Solutions</span></div></footer>
   <script type="module" src="app.js"></script>
 </body>
 </html>
