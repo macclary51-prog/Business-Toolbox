@@ -164,24 +164,129 @@
       </header>
       <div class="app-content">
         <section class="owner-dashboard">
-          <div class="stats-grid owner-stats">
-            <article class="stat-card"><span>Total Businesses</span><strong id="ownerStatBusinesses">0</strong></article>
-            <article class="stat-card"><span>Active Subscriptions</span><strong id="ownerStatActive">0</strong></article>
-            <article class="stat-card"><span>Setup Required</span><strong id="ownerStatSetup">0</strong></article>
-            <article class="stat-card"><span>Monthly Revenue</span><strong id="ownerStatRevenue">$0.00</strong></article>
+          <div class="owner-overview-heading">
+            <div>
+              <span class="eyebrow">PLATFORM HEALTH</span>
+              <h1>Owner Overview</h1>
+              <p>Monitor customers, revenue, account status, tool adoption and recent platform activity.</p>
+            </div>
+            <div class="owner-overview-actions">
+              <button class="btn btn-secondary" id="ownerRefreshBtn">Refresh Data</button>
+            </div>
           </div>
+
+          <div class="stats-grid owner-stats owner-stats-primary">
+            <article class="stat-card"><span>Total Businesses</span><strong id="ownerStatBusinesses">0</strong><small id="ownerStatBusinessesSub">All customer accounts</small></article>
+            <article class="stat-card"><span>Active Subscriptions</span><strong id="ownerStatActive">0</strong><small id="ownerStatActiveSub">Paying accounts</small></article>
+            <article class="stat-card"><span>Monthly Revenue</span><strong id="ownerStatRevenue">$0.00</strong><small id="ownerStatRevenueSub">$0.99 per active account</small></article>
+            <article class="stat-card"><span>Annual Projection</span><strong id="ownerStatAnnual">$0.00</strong><small>Based on current active accounts</small></article>
+          </div>
+
+          <div class="owner-health-grid">
+            <article class="panel owner-health-card">
+              <div class="panel-heading"><div><small>SUBSCRIPTIONS</small><h3>Account Breakdown</h3></div></div>
+              <div class="owner-breakdown-grid">
+                <div><span>Setup Required</span><strong id="ownerStatSetup">0</strong></div>
+                <div><span>Past Due</span><strong id="ownerStatPastDue">0</strong></div>
+                <div><span>Canceled</span><strong id="ownerStatCanceled">0</strong></div>
+                <div><span>Suspended</span><strong id="ownerStatSuspended">0</strong></div>
+              </div>
+            </article>
+
+            <article class="panel owner-health-card">
+              <div class="panel-heading"><div><small>GROWTH</small><h3>Recent Signups</h3></div></div>
+              <div class="owner-breakdown-grid">
+                <div><span>Last 7 Days</span><strong id="ownerStat7Days">0</strong></div>
+                <div><span>Last 30 Days</span><strong id="ownerStat30Days">0</strong></div>
+                <div><span>This Month</span><strong id="ownerStatThisMonth">0</strong></div>
+                <div><span>Average Tools Enabled</span><strong id="ownerStatAvgTools">0</strong></div>
+              </div>
+            </article>
+          </div>
+
           <article class="panel owner-business-panel">
             <div class="panel-heading owner-panel-heading">
-              <div><small>CUSTOMERS</small><h3>Business Accounts</h3></div>
-              <input class="input owner-search" id="ownerBusinessSearch" type="search" placeholder="Search businesses or owners..." />
+              <div>
+                <small>CUSTOMERS</small>
+                <h3>Business Accounts</h3>
+                <p class="owner-result-count" id="ownerResultCount">0 businesses</p>
+              </div>
+              <div class="owner-filter-bar">
+                <input class="input owner-search" id="ownerBusinessSearch" type="search" placeholder="Search business, owner, website..." />
+                <select class="input" id="ownerSubscriptionFilter">
+                  <option value="all">All subscriptions</option>
+                  <option value="active">Active</option>
+                  <option value="setup_required">Setup required</option>
+                  <option value="past_due">Past due</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+                <select class="input" id="ownerAccessFilter">
+                  <option value="all">All access</option>
+                  <option value="active">Active access</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
             </div>
-            <p class="panel-copy">Manage customer subscription status and platform access. Your platform-owner account is separate from customer business accounts.</p>
+            <p class="panel-copy">View detailed customer information, manage subscription state, control platform access and inspect toolbox usage.</p>
             <div class="owner-business-list" id="ownerBusinessList"></div>
           </article>
         </section>
       </div>
     </div>
   </section>
+
+
+  <div class="modal-backdrop hidden" id="ownerBusinessModal" role="dialog" aria-modal="true" aria-labelledby="ownerBusinessModalTitle">
+    <div class="modal owner-detail-modal">
+      <button class="modal-close" data-close-owner-business aria-label="Close">×</button>
+      <div class="owner-detail-header">
+        <div>
+          <span class="eyebrow">CUSTOMER ACCOUNT</span>
+          <h2 id="ownerBusinessModalTitle">Business Details</h2>
+          <p id="ownerBusinessModalSubtitle"></p>
+        </div>
+        <span class="owner-status active" id="ownerDetailAccessBadge">active</span>
+      </div>
+
+      <div class="owner-detail-grid">
+        <section class="owner-detail-section">
+          <h3>Business Information</h3>
+          <div class="owner-detail-list" id="ownerDetailBusinessInfo"></div>
+        </section>
+        <section class="owner-detail-section">
+          <h3>Account & Subscription</h3>
+          <div class="owner-detail-list" id="ownerDetailAccountInfo"></div>
+        </section>
+      </div>
+
+      <section class="owner-detail-section">
+        <div class="owner-detail-section-heading">
+          <h3>Enabled Tools</h3>
+          <span id="ownerDetailToolCount"></span>
+        </div>
+        <div class="owner-detail-tools" id="ownerDetailTools"></div>
+      </section>
+
+      <section class="owner-detail-section">
+        <div class="owner-detail-section-heading">
+          <h3>Toolbox Activity</h3>
+          <span id="ownerDetailRecordCount">Loading...</span>
+        </div>
+        <div class="owner-detail-activity" id="ownerDetailActivity"></div>
+      </section>
+
+      <div class="owner-detail-actions">
+        <select class="input" id="ownerDetailSubscription">
+          <option value="setup_required">setup required</option>
+          <option value="active">active</option>
+          <option value="past_due">past due</option>
+          <option value="canceled">canceled</option>
+        </select>
+        <button class="btn btn-secondary" id="ownerDetailSaveSubscription">Save Subscription</button>
+        <button class="btn btn-ghost" id="ownerDetailToggleAccess">Suspend Access</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal auth-modal-card">
