@@ -202,14 +202,14 @@ renderBusinessExamples();
 /* NAV + AUTH MODALS */
 $("year").textContent=new Date().getFullYear();
 $("navToggle").addEventListener("click",()=>{const open=$("navLinks").classList.toggle("open");$("navToggle").setAttribute("aria-expanded",String(open));});
-const publicSite=$("publicSite"), publicFooter=$("publicFooter"), appShell=$("appShell"), authModal=$("authModal"), recordModal=$("recordModal");
+const publicSite=$("publicSite"), publicFooter=$("publicFooter"), appShell=$("appShell"), ownerShell=$("ownerShell"), authModal=$("authModal"), recordModal=$("recordModal");
 function switchAuthTab(tab){document.querySelectorAll("[data-auth-tab]").forEach(b=>b.classList.toggle("active",b.dataset.authTab===tab));$("loginForm").classList.toggle("hidden",tab!=="login");$("signupForm").classList.toggle("hidden",tab!=="signup");$("authMessage").textContent="";}
 document.querySelectorAll("[data-open-auth]").forEach(btn=>btn.addEventListener("click",()=>{switchAuthTab(btn.dataset.openAuth);authModal.classList.remove("hidden");}));
 document.querySelectorAll("[data-auth-tab]").forEach(btn=>btn.addEventListener("click",()=>switchAuthTab(btn.dataset.authTab)));
 document.querySelectorAll("[data-close-modal]").forEach(btn=>btn.addEventListener("click",()=>authModal.classList.add("hidden")));
 authModal.addEventListener("click",e=>{if(e.target===authModal)authModal.classList.add("hidden")});
 
-let currentUser=null,userProfile=null,business=null,records=[];
+let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[];
 $("signupForm").addEventListener("submit",async e=>{
   e.preventDefault(); const message=$("authMessage"); message.className="form-message"; message.textContent="Creating account...";
   try{
@@ -217,7 +217,7 @@ $("signupForm").addEventListener("submit",async e=>{
     const credential=await createUserWithEmailAndPassword(auth,email,password); const uid=credential.user.uid; const businessId=crypto.randomUUID?crypto.randomUUID():`${uid}-${Date.now()}`;
     await updateProfile(credential.user,{displayName:ownerName});
     await setDoc(doc(db,"users",uid),{displayName:ownerName,email,businessId,role:"owner",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-    await setDoc(doc(db,"businesses",businessId),{name:businessName,ownerUid:uid,ownerName,phone:"",website:"",enabledModules:defaultEnabledModules,plan:"starter",subscriptionStatus:"setup_required",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    await setDoc(doc(db,"businesses",businessId),{name:businessName,ownerUid:uid,ownerName,phone:"",website:"",enabledModules:defaultEnabledModules,plan:"starter",subscriptionStatus:"setup_required",platformStatus:"active",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     message.className="form-message success";message.textContent="Account created.";authModal.classList.add("hidden");
   }catch(error){console.error(error);message.textContent=friendlyAuthError(error.code);}
 });
@@ -227,15 +227,87 @@ $("logoutBtn").addEventListener("click",()=>signOut(auth));
 
 onAuthStateChanged(auth,async user=>{
   currentUser=user;
-  if(!user){userProfile=null;business=null;records=[];showPublic();return;}
+  if(!user){userProfile=null;business=null;records=[];currentPlatformAdmin=null;ownerBusinesses=[];showPublic();return;}
   try{
-    const userSnap=await getDoc(doc(db,"users",user.uid)); if(!userSnap.exists())throw new Error("User profile not found."); userProfile={id:userSnap.id,...userSnap.data()};
-    const businessSnap=await getDoc(doc(db,"businesses",userProfile.businessId)); if(!businessSnap.exists())throw new Error("Business record not found."); business={id:businessSnap.id,...businessSnap.data()};
+    const adminSnap=await getDoc(doc(db,"platformAdmins",user.uid));
+    if(adminSnap.exists() && adminSnap.data().active===true && adminSnap.data().role==="platform_owner"){
+      currentPlatformAdmin={id:adminSnap.id,...adminSnap.data()};
+      userProfile=null;business=null;records=[];
+      await loadOwnerBusinesses();
+      showOwnerApp();
+      return;
+    }
+
+    currentPlatformAdmin=null;
+    const userSnap=await getDoc(doc(db,"users",user.uid));
+    if(!userSnap.exists())throw new Error("User profile not found.");
+    userProfile={id:userSnap.id,...userSnap.data()};
+    const businessSnap=await getDoc(doc(db,"businesses",userProfile.businessId));
+    if(!businessSnap.exists())throw new Error("Business record not found or access is suspended.");
+    business={id:businessSnap.id,...businessSnap.data()};
     await loadRecords();showApp();
-  }catch(error){console.error(error);alert("Your business account could not be loaded. Check Firestore rules and setup.");await signOut(auth);}
+  }catch(error){console.error(error);alert("This account could not be loaded. Check account access and Firestore setup.");await signOut(auth);}
 });
-function showPublic(){publicSite.classList.remove("hidden");publicFooter.classList.remove("hidden");appShell.classList.add("hidden");document.querySelector(".site-header").classList.remove("hidden")}
-function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");appShell.classList.remove("hidden");$("sidebarBusinessName").textContent=business.name;$("sidebarUserEmail").textContent=currentUser.email||"";$("settingsBusinessName").value=business.name||"";$("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";$("settingsPhone").value=business.phone||"";$("settingsWebsite").value=business.website||"";renderModuleOptions();renderEverything();switchView("dashboard")}
+function showPublic(){publicSite.classList.remove("hidden");publicFooter.classList.remove("hidden");appShell.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.remove("hidden")}
+function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");appShell.classList.remove("hidden");$("sidebarBusinessName").textContent=business.name;$("sidebarUserEmail").textContent=currentUser.email||"";$("settingsBusinessName").value=business.name||"";$("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";$("settingsPhone").value=business.phone||"";$("settingsWebsite").value=business.website||"";renderModuleOptions();renderEverything();switchView("dashboard")}
+
+async function loadOwnerBusinesses(){
+  const snap=await getDocs(collection(db,"businesses"));
+  ownerBusinesses=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
+    const at=a.createdAt?.seconds||0,bt=b.createdAt?.seconds||0;return bt-at;
+  });
+}
+function showOwnerApp(){
+  publicSite.classList.add("hidden");publicFooter.classList.add("hidden");appShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");ownerShell.classList.remove("hidden");
+  $("ownerDisplayName").textContent=currentPlatformAdmin.displayName||currentUser.displayName||"Silverforge Owner";
+  $("ownerEmail").textContent=currentUser.email||currentPlatformAdmin.email||"";
+  renderOwnerDashboard();
+}
+function renderOwnerDashboard(){
+  const active=ownerBusinesses.filter(b=>b.subscriptionStatus==="active").length;
+  const setup=ownerBusinesses.filter(b=>(b.subscriptionStatus||"setup_required")==="setup_required").length;
+  $("ownerStatBusinesses").textContent=ownerBusinesses.length;
+  $("ownerStatActive").textContent=active;
+  $("ownerStatSetup").textContent=setup;
+  $("ownerStatRevenue").textContent=`$${(active*.99).toFixed(2)}`;
+  renderOwnerBusinesses();
+}
+function ownerStatusClass(value=""){return String(value).toLowerCase().replaceAll(" ","_")}
+function renderOwnerBusinesses(){
+  const q=($("ownerBusinessSearch").value||"").trim().toLowerCase();
+  const filtered=ownerBusinesses.filter(b=>!q||`${b.name||""} ${b.ownerName||""} ${b.website||""} ${b.subscriptionStatus||""}`.toLowerCase().includes(q));
+  $("ownerBusinessList").innerHTML=filtered.length?filtered.map(b=>{
+    const subscription=b.subscriptionStatus||"setup_required";
+    const access=b.platformStatus||"active";
+    return `<div class="owner-business-row">
+      <div class="owner-business-main"><strong>${safeText(b.name||"Unnamed Business")}</strong><span>${safeText(b.ownerName||"No owner name")}</span></div>
+      <div class="owner-business-meta"><strong>Subscription</strong><span class="owner-status ${ownerStatusClass(subscription)}">${safeText(subscription.replaceAll("_"," "))}</span></div>
+      <div class="owner-business-meta"><strong>Platform Access</strong><span class="owner-status ${ownerStatusClass(access)}">${safeText(access)}</span></div>
+      <div class="owner-actions">
+        <select class="input" data-owner-subscription="${b.id}" aria-label="Subscription status for ${safeText(b.name||"business")}">
+          ${["setup_required","active","past_due","canceled"].map(v=>`<option value="${v}" ${v===subscription?"selected":""}>${v.replaceAll("_"," ")}</option>`).join("")}
+        </select>
+        <button class="mini-btn ${access==="suspended"?"":"danger"}" data-owner-access="${b.id}" data-next-access="${access==="suspended"?"active":"suspended"}">${access==="suspended"?"Restore Access":"Suspend Access"}</button>
+      </div>
+    </div>`;
+  }).join(""):'<div class="empty-state">No business accounts match this search.</div>';
+
+  document.querySelectorAll("[data-owner-subscription]").forEach(select=>select.onchange=async()=>{
+    const id=select.dataset.ownerSubscription;
+    await updateDoc(doc(db,"businesses",id),{subscriptionStatus:select.value,updatedAt:serverTimestamp()});
+    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.subscriptionStatus=select.value;renderOwnerDashboard();
+  });
+  document.querySelectorAll("[data-owner-access]").forEach(btn=>btn.onclick=async()=>{
+    const id=btn.dataset.ownerAccess,next=btn.dataset.nextAccess;
+    const label=next==="suspended"?"Suspend this business's platform access?":"Restore this business's platform access?";
+    if(!confirm(label))return;
+    await updateDoc(doc(db,"businesses",id),{platformStatus:next,updatedAt:serverTimestamp()});
+    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.platformStatus=next;renderOwnerDashboard();
+  });
+}
+$("ownerBusinessSearch").addEventListener("input",renderOwnerBusinesses);
+$("ownerLogoutBtn").addEventListener("click",()=>signOut(auth));
+
 async function loadRecords(){const ref=collection(db,"businesses",userProfile.businessId,"records");const snap=await getDocs(query(ref,orderBy("createdAt","desc")));records=snap.docs.map(d=>({id:d.id,...d.data()}));}
 function enabledModules(){return Array.isArray(business.enabledModules)?business.enabledModules:defaultEnabledModules}
 function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords()}
