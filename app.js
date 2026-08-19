@@ -132,22 +132,292 @@ const toolDefinitions = [
       {key:"conditionOut",label:"Condition When Issued",type:"select",options:["Excellent","Good","Fair","Damaged"]}
     ]
   },
-  {id:"logbook",name:"Daily Logbook",icon:"☰",category:"Operations",desc:"Keep searchable day-to-day business notes.",bullets:["Daily operational notes","Problems and unusual events","Searchable history","Status tracking"]},
-  {id:"employees",name:"Employees",icon:"♙",category:"Employees",desc:"Keep lightweight employee records and notes.",bullets:["Employee information","Role notes","Status","Important dates"]},
-  {id:"vehicles",name:"Vehicles",icon:"⌁",category:"Assets",desc:"Track company vehicles, condition and business notes.",bullets:["Vehicle details","Mileage notes","Condition","Service reminders"]},
-  {id:"photo-proof",name:"Photo Proof",icon:"▣",category:"Jobs",desc:"Organize before, after and proof-of-work records.",bullets:["Before/after records","Damage documentation","Job references","Timestamp-ready workflow"]},
-  {id:"vendors",name:"Vendors",icon:"◇",category:"Admin",desc:"Keep supplier and vendor information together.",bullets:["Vendor contacts","Services supplied","Account notes","Pricing history notes"]},
-  {id:"subscriptions",name:"Subscriptions",icon:"$",category:"Admin",desc:"Track recurring business software and service costs.",bullets:["Monthly/yearly services","Renewal dates","Costs","Cancellation notes"]},
-  {id:"documents",name:"Documents",icon:"▤",category:"Admin",desc:"Track important business documents and dates.",bullets:["Document register","Expiration dates","Responsible person","Reference notes"]},
-  {id:"training",name:"Training",icon:"◎",category:"Employees",desc:"Track training and employee certification items.",bullets:["Training assignments","Completion status","Certification dates","Renewal dates"]},
-  {id:"website-monitor",name:"Website Monitor",icon:"◉",category:"Digital",desc:"Keep website checks, outages and maintenance notes.",bullets:["Website status checks","Outage history","SSL/domain notes","Maintenance reminders"]},
-  {id:"qr-assets",name:"QR Assets",icon:"⌗",category:"Digital",desc:"Prepare asset records that can be linked to QR labels.",bullets:["QR-ready asset IDs","Instructions","Maintenance history","Location information"]},
-  {id:"supplies",name:"Supply Alerts",icon:"△",category:"Operations",desc:"Record low-stock items and restocking needs.",bullets:["Low-stock reports","Urgency","Restock status","Supply location"]},
-  {id:"warranties",name:"Warranties",icon:"W",category:"Assets",desc:"Track purchase and warranty information for business assets.",bullets:["Purchase date","Warranty expiration","Manufacturer","Receipt/reference notes"]},
-  {id:"complaints",name:"Complaints",icon:"!",category:"Feedback",desc:"Record and follow up on customer complaints.",bullets:["Complaint history","Resolution status","Follow-up notes","Recurring issue visibility"]},
-  {id:"suggestions",name:"Suggestions",icon:"+",category:"Feedback",desc:"Capture employee and business improvement ideas.",bullets:["Employee suggestions","Improvement ideas","Priority","Implementation status"]},
-  {id:"visitor-log",name:"Visitor Log",icon:"V",category:"Admin",desc:"Record visitors, vendors and contractors on site.",bullets:["Visitor name","Reason for visit","Arrival/departure","Contact notes"]},
-  {id:"package-log",name:"Package Log",icon:"□",category:"Admin",desc:"Track packages received by the business.",bullets:["Carrier/sender","Recipient","Received date","Pickup status"]}
+  {
+    id:"logbook",name:"Daily Logbook",icon:"☰",category:"Operations",
+    desc:"Keep searchable day-to-day business notes.",
+    bullets:["Daily operational notes","Problems and unusual events","Searchable history","Status tracking"],
+    helper:"Create a dated operational log entry for a shift, location or workday.",
+    dueLabel:"Follow-up Date",
+    statuses:["Logged","Needs Follow-up","Resolved","Archived"],
+    fields:[
+      {key:"title",label:"Log Entry Title",type:"text",required:true,wide:true},
+      {key:"logDate",label:"Log Date",type:"date",required:true},
+      {key:"shift",label:"Shift / Time Period",type:"text",placeholder:"Opening, Day, Closing..."},
+      {key:"location",label:"Location",type:"text"},
+      {key:"people",label:"People Involved",type:"text"},
+      {key:"issueFlag",label:"Issue Level",type:"select",options:["Routine","Worth Noting","Needs Attention","Urgent"]},
+      {key:"nextAction",label:"Next Action",type:"textarea",wide:true,placeholder:"What needs to happen next?"}
+    ]
+  },
+  {
+    id:"employees",name:"Employees",icon:"♙",category:"Employees",
+    desc:"Keep lightweight employee records and notes.",
+    bullets:["Employee information","Role notes","Status","Important dates"],
+    helper:"Maintain a simple employee record with contact, role and employment details.",
+    dueLabel:"Review / Renewal Date",
+    statuses:["Active","On Leave","Inactive","Archived"],
+    fields:[
+      {key:"title",label:"Employee Name",type:"text",required:true,wide:true},
+      {key:"role",label:"Role / Position",type:"text",required:true},
+      {key:"department",label:"Department / Team",type:"text"},
+      {key:"email",label:"Email",type:"email"},
+      {key:"phone",label:"Phone",type:"tel"},
+      {key:"startDate",label:"Start Date",type:"date"},
+      {key:"employmentType",label:"Employment Type",type:"select",options:["Full Time","Part Time","Contractor","Temporary","Seasonal","Other"]},
+      {key:"emergencyContact",label:"Emergency Contact",type:"text",wide:true}
+    ]
+  },
+  {
+    id:"vehicles",name:"Vehicles",icon:"⌁",category:"Assets",
+    desc:"Track company vehicles, condition and business notes.",
+    bullets:["Vehicle details","Mileage notes","Condition","Service reminders"],
+    helper:"Create a company vehicle record with assignment, mileage and service details.",
+    dueLabel:"Next Service Date",
+    statuses:["Active","Needs Service","Out of Service","Sold / Retired","Archived"],
+    fields:[
+      {key:"title",label:"Vehicle Name / Unit",type:"text",required:true,wide:true},
+      {key:"year",label:"Year",type:"number",placeholder:"2026"},
+      {key:"makeModel",label:"Make / Model",type:"text",required:true},
+      {key:"vin",label:"VIN",type:"text"},
+      {key:"plate",label:"License Plate",type:"text"},
+      {key:"mileage",label:"Current Mileage",type:"number"},
+      {key:"condition",label:"Condition",type:"select",options:["Excellent","Good","Fair","Needs Repair","Out of Service"]},
+      {key:"assignedTo",label:"Assigned To",type:"text"}
+    ]
+  },
+  {
+    id:"photo-proof",name:"Photo Proof",icon:"▣",category:"Jobs",
+    desc:"Organize before, after and proof-of-work records.",
+    bullets:["Before/after records","Damage documentation","Job references","Timestamp-ready workflow"],
+    helper:"Save a job-proof record with a photo link/reference, location and capture details.",
+    dueLabel:"Review Date",
+    statuses:["Captured","Needs Review","Approved","Disputed","Archived"],
+    fields:[
+      {key:"title",label:"Job / Proof Title",type:"text",required:true,wide:true},
+      {key:"jobReference",label:"Job / Customer Reference",type:"text"},
+      {key:"proofType",label:"Proof Type",type:"select",options:["Before Work","After Work","Damage","Delivery","Completion","Inspection","Other"]},
+      {key:"location",label:"Location",type:"text"},
+      {key:"capturedAt",label:"Captured Date & Time",type:"datetime-local"},
+      {key:"capturedBy",label:"Captured By",type:"text"},
+      {key:"photoUrl",label:"Photo URL / File Reference",type:"url",wide:true,placeholder:"https://..."},
+      {key:"customerName",label:"Customer / Client",type:"text"}
+    ]
+  },
+  {
+    id:"vendors",name:"Vendors",icon:"◇",category:"Admin",
+    desc:"Keep supplier and vendor information together.",
+    bullets:["Vendor contacts","Services supplied","Account notes","Pricing history notes"],
+    helper:"Maintain supplier and service-provider contact/account information.",
+    dueLabel:"Review / Renewal Date",
+    statuses:["Active","Preferred","On Hold","Inactive","Archived"],
+    fields:[
+      {key:"title",label:"Vendor / Supplier Name",type:"text",required:true,wide:true},
+      {key:"contactName",label:"Contact Person",type:"text"},
+      {key:"service",label:"Product / Service Supplied",type:"text",required:true},
+      {key:"phone",label:"Phone",type:"tel"},
+      {key:"email",label:"Email",type:"email"},
+      {key:"website",label:"Website",type:"url"},
+      {key:"accountNumber",label:"Account Number",type:"text"},
+      {key:"paymentTerms",label:"Payment Terms",type:"text",placeholder:"Net 30, COD, card..."}
+    ]
+  },
+  {
+    id:"subscriptions",name:"Subscriptions",icon:"$",category:"Admin",
+    desc:"Track recurring business software and service costs.",
+    bullets:["Monthly/yearly services","Renewal dates","Costs","Cancellation notes"],
+    helper:"Track recurring business services, their cost and next billing date.",
+    dueLabel:"Next Billing / Renewal",
+    statuses:["Active","Trial","Canceling","Canceled","Archived"],
+    fields:[
+      {key:"title",label:"Subscription / Service",type:"text",required:true,wide:true},
+      {key:"provider",label:"Provider",type:"text",required:true},
+      {key:"cost",label:"Recurring Cost",type:"number",step:"0.01",placeholder:"0.00"},
+      {key:"billingCycle",label:"Billing Cycle",type:"select",options:["Monthly","Quarterly","Semiannual","Annual","Other"]},
+      {key:"accountEmail",label:"Account Email",type:"email"},
+      {key:"paymentMethod",label:"Payment Method / Last 4",type:"text"},
+      {key:"startedDate",label:"Started Date",type:"date"},
+      {key:"cancelUrl",label:"Manage / Cancel URL",type:"url",wide:true}
+    ]
+  },
+  {
+    id:"documents",name:"Documents",icon:"▤",category:"Admin",
+    desc:"Track important business documents and dates.",
+    bullets:["Document register","Expiration dates","Responsible person","Reference notes"],
+    helper:"Register important documents, where they are stored and when they expire.",
+    dueLabel:"Expiration / Review Date",
+    statuses:["Current","Needs Renewal","Expired","Replaced","Archived"],
+    fields:[
+      {key:"title",label:"Document Name",type:"text",required:true,wide:true},
+      {key:"documentType",label:"Document Type",type:"select",options:["License","Permit","Insurance","Contract","Policy","Certificate","Registration","Tax","Other"]},
+      {key:"referenceNumber",label:"Document / Reference Number",type:"text"},
+      {key:"issuedBy",label:"Issued By",type:"text"},
+      {key:"responsiblePerson",label:"Responsible Person",type:"text"},
+      {key:"issueDate",label:"Issue Date",type:"date"},
+      {key:"storageLocation",label:"Storage Location / URL",type:"text",wide:true},
+      {key:"confidentiality",label:"Access Level",type:"select",options:["General","Internal","Restricted","Owner Only"]}
+    ]
+  },
+  {
+    id:"training",name:"Training",icon:"◎",category:"Employees",
+    desc:"Track training and employee certification items.",
+    bullets:["Training assignments","Completion status","Certification dates","Renewal dates"],
+    helper:"Track employee training, certification and renewal requirements.",
+    dueLabel:"Renewal / Expiration Date",
+    statuses:["Assigned","In Progress","Completed","Expired","Archived"],
+    fields:[
+      {key:"title",label:"Training / Certification",type:"text",required:true,wide:true},
+      {key:"employee",label:"Employee",type:"text",required:true},
+      {key:"provider",label:"Training Provider",type:"text"},
+      {key:"assignedDate",label:"Assigned Date",type:"date"},
+      {key:"completionDate",label:"Completion Date",type:"date"},
+      {key:"certificateNumber",label:"Certificate Number",type:"text"},
+      {key:"score",label:"Score / Result",type:"text"},
+      {key:"requiredByRole",label:"Required For",type:"text",placeholder:"Driver, supervisor, all staff..."}
+    ]
+  },
+  {
+    id:"website-monitor",name:"Website Monitor",icon:"◉",category:"Digital",
+    desc:"Keep website checks, outages and maintenance notes.",
+    bullets:["Website status checks","Outage history","SSL/domain notes","Maintenance reminders"],
+    helper:"Log website/domain/SSL checks and issues. This version records checks; automatic remote uptime polling can be added later with a backend.",
+    dueLabel:"Next Check Date",
+    statuses:["Operational","Degraded","Down","Needs Attention","Archived"],
+    fields:[
+      {key:"title",label:"Website / Service Name",type:"text",required:true,wide:true},
+      {key:"url",label:"Website URL",type:"url",required:true,wide:true,placeholder:"https://example.com"},
+      {key:"checkType",label:"Check Type",type:"select",options:["Uptime","SSL Certificate","Domain Renewal","DNS","Content / Page","Form / Checkout","Other"]},
+      {key:"checkedAt",label:"Last Checked",type:"datetime-local"},
+      {key:"observedStatus",label:"Observed Status",type:"select",options:["Working","Slow","Intermittent","Down","Unknown"]},
+      {key:"responseNotes",label:"Check Result / Issue",type:"textarea",wide:true},
+      {key:"checkedBy",label:"Checked By",type:"text"}
+    ]
+  },
+  {
+    id:"qr-assets",name:"QR Assets",icon:"⌗",category:"Digital",
+    desc:"Prepare asset records that can be linked to QR labels.",
+    bullets:["QR-ready asset IDs","Instructions","Maintenance history","Location information"],
+    helper:"Create a QR-ready asset record with a unique ID and the destination/instructions it should open.",
+    dueLabel:"Review Date",
+    statuses:["Active","Needs Update","Retired","Archived"],
+    fields:[
+      {key:"title",label:"QR Asset Name",type:"text",required:true,wide:true},
+      {key:"assetId",label:"Asset / QR ID",type:"text",required:true},
+      {key:"destinationUrl",label:"Destination URL",type:"url",wide:true},
+      {key:"location",label:"Physical Location",type:"text"},
+      {key:"assignedTo",label:"Assigned To",type:"text"},
+      {key:"instructions",label:"Instructions / QR Content",type:"textarea",wide:true},
+      {key:"lastUpdatedLabel",label:"Label Last Updated",type:"date"}
+    ]
+  },
+  {
+    id:"supplies",name:"Supply Alerts",icon:"△",category:"Operations",
+    desc:"Record low-stock items and restocking needs.",
+    bullets:["Low-stock reports","Urgency","Restock status","Supply location"],
+    helper:"Track supply quantities, reorder points and restocking needs.",
+    dueLabel:"Restock By",
+    statuses:["In Stock","Low Stock","Out of Stock","Ordered","Archived"],
+    fields:[
+      {key:"title",label:"Supply Item",type:"text",required:true,wide:true},
+      {key:"sku",label:"SKU / Item Number",type:"text"},
+      {key:"location",label:"Storage Location",type:"text"},
+      {key:"quantity",label:"Current Quantity",type:"number",required:true},
+      {key:"reorderLevel",label:"Reorder Level",type:"number"},
+      {key:"unit",label:"Unit",type:"text",placeholder:"boxes, each, gallons..."},
+      {key:"supplier",label:"Preferred Supplier",type:"text"},
+      {key:"urgency",label:"Urgency",type:"select",options:["Normal","Soon","High","Critical"]}
+    ]
+  },
+  {
+    id:"warranties",name:"Warranties",icon:"W",category:"Assets",
+    desc:"Track purchase and warranty information for business assets.",
+    bullets:["Purchase date","Warranty expiration","Manufacturer","Receipt/reference notes"],
+    helper:"Record warranty coverage, purchase information and claim details for an asset.",
+    dueLabel:"Warranty Expiration",
+    statuses:["Active","Claim Open","Expired","Archived"],
+    fields:[
+      {key:"title",label:"Asset / Product",type:"text",required:true,wide:true},
+      {key:"manufacturer",label:"Manufacturer",type:"text"},
+      {key:"model",label:"Model",type:"text"},
+      {key:"serialNumber",label:"Serial Number",type:"text"},
+      {key:"purchaseDate",label:"Purchase Date",type:"date"},
+      {key:"retailer",label:"Purchased From",type:"text"},
+      {key:"warrantyType",label:"Warranty Type",type:"select",options:["Manufacturer","Extended","Service Plan","Lifetime","Other"]},
+      {key:"claimContact",label:"Warranty / Claim Contact",type:"text",wide:true}
+    ]
+  },
+  {
+    id:"complaints",name:"Complaints",icon:"!",category:"Feedback",
+    desc:"Record and follow up on customer complaints.",
+    bullets:["Complaint history","Resolution status","Follow-up notes","Recurring issue visibility"],
+    helper:"Document customer complaints, severity, ownership and resolution.",
+    dueLabel:"Follow-up Due",
+    statuses:["New","In Review","Waiting on Customer","Resolved","Archived"],
+    fields:[
+      {key:"title",label:"Complaint Title",type:"text",required:true,wide:true},
+      {key:"customer",label:"Customer / Client",type:"text",required:true},
+      {key:"contact",label:"Customer Contact",type:"text"},
+      {key:"receivedAt",label:"Received Date & Time",type:"datetime-local"},
+      {key:"channel",label:"Received Through",type:"select",options:["Phone","Email","Website","In Person","Social Media","Review Site","Other"]},
+      {key:"category",label:"Complaint Category",type:"text"},
+      {key:"severity",label:"Severity",type:"select",options:["Low","Moderate","High","Critical"]},
+      {key:"assignedTo",label:"Assigned To",type:"text"},
+      {key:"resolution",label:"Resolution / Response",type:"textarea",wide:true}
+    ]
+  },
+  {
+    id:"suggestions",name:"Suggestions",icon:"+",category:"Feedback",
+    desc:"Capture employee and business improvement ideas.",
+    bullets:["Employee suggestions","Improvement ideas","Priority","Implementation status"],
+    helper:"Capture an improvement idea and track it from submission through implementation.",
+    dueLabel:"Review By",
+    statuses:["Submitted","Under Review","Approved","Rejected","Implemented","Archived"],
+    fields:[
+      {key:"title",label:"Suggestion Title",type:"text",required:true,wide:true},
+      {key:"submittedBy",label:"Submitted By",type:"text",placeholder:"Name or Anonymous"},
+      {key:"anonymous",label:"Anonymous",type:"select",options:["No","Yes"]},
+      {key:"category",label:"Category",type:"select",options:["Operations","Safety","Customer Service","Cost Savings","Employee Experience","Technology","Other"]},
+      {key:"priority",label:"Priority",type:"select",options:["Low","Normal","High"]},
+      {key:"expectedBenefit",label:"Expected Benefit",type:"textarea",wide:true},
+      {key:"estimatedEffort",label:"Estimated Effort",type:"select",options:["Small","Medium","Large","Unknown"]}
+    ]
+  },
+  {
+    id:"visitor-log",name:"Visitor Log",icon:"V",category:"Admin",
+    desc:"Record visitors, vendors and contractors on site.",
+    bullets:["Visitor name","Reason for visit","Arrival/departure","Contact notes"],
+    helper:"Check visitors, vendors and contractors in and out of a business location.",
+    dueLabel:"Follow-up Date",
+    statuses:["On Site","Checked Out","Denied","Archived"],
+    fields:[
+      {key:"title",label:"Visitor Name",type:"text",required:true,wide:true},
+      {key:"company",label:"Company / Organization",type:"text"},
+      {key:"host",label:"Person Visiting / Host",type:"text"},
+      {key:"reason",label:"Reason for Visit",type:"text",required:true},
+      {key:"arrival",label:"Arrival",type:"datetime-local",required:true},
+      {key:"departure",label:"Departure",type:"datetime-local"},
+      {key:"phone",label:"Phone",type:"tel"},
+      {key:"badge",label:"Badge / Pass Number",type:"text"}
+    ]
+  },
+  {
+    id:"package-log",name:"Package Log",icon:"□",category:"Admin",
+    desc:"Track packages received by the business.",
+    bullets:["Carrier/sender","Recipient","Received date","Pickup status"],
+    helper:"Log incoming deliveries and track who was notified and who picked them up.",
+    dueLabel:"Pickup / Action By",
+    statuses:["Received","Recipient Notified","Picked Up","Returned","Archived"],
+    fields:[
+      {key:"title",label:"Package / Tracking Number",type:"text",required:true,wide:true},
+      {key:"carrier",label:"Carrier",type:"select",options:["USPS","UPS","FedEx","Amazon","DHL","Courier","Other"]},
+      {key:"sender",label:"Sender",type:"text"},
+      {key:"recipient",label:"Recipient",type:"text",required:true},
+      {key:"receivedAt",label:"Received Date & Time",type:"datetime-local",required:true},
+      {key:"receivedBy",label:"Received By",type:"text"},
+      {key:"storageLocation",label:"Stored At",type:"text"},
+      {key:"pickedUpBy",label:"Picked Up By",type:"text"},
+      {key:"pickupDate",label:"Pickup Date & Time",type:"datetime-local"}
+    ]
+  }
 ];
 
 const defaultEnabledModules = ["tasks","checklists","equipment","maintenance","renewals","incidents","shift-handoff","asset-checkout"];
@@ -164,7 +434,12 @@ const businessExamples = [
 function toolById(id){
   const base = toolDefinitions.find(t=>t.id===id);
   if(!base) return {id,name:id,icon:"•",category:"Other",desc:"Business record.",bullets:[],fields:[{key:"title",label:"Title",type:"text",required:true,wide:true}]};
-  return {...base, fields:base.fields || [{key:"title",label:`${base.name} Record`,type:"text",required:true,wide:true}], helper:base.helper || base.desc, dueLabel:base.dueLabel || "Due Date"};
+  return {...base,
+    fields:base.fields || [{key:"title",label:`${base.name} Record`,type:"text",required:true,wide:true}],
+    helper:base.helper || base.desc,
+    dueLabel:base.dueLabel || "Due Date",
+    statuses:base.statuses || ["Open","In Progress","Complete","Archived"]
+  };
 }
 function safeText(value=""){return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
 function prettyValue(value){if(value===undefined||value===null||value==="")return "";return String(value).replaceAll("\n",", ")}
@@ -542,13 +817,31 @@ function fieldHtml(field,value=""){
   else control=`<input type="${field.type||"text"}" ${attrs} value="${safeText(value)}" />`;
   return `<label class="${field.wide?"field-wide":""}">${safeText(field.label)}${control}${field.help?`<span class="field-help">${safeText(field.help)}</span>`:""}</label>`;
 }
-function renderDynamicFields(moduleId,record=null){const t=toolById(moduleId);$("recordEyebrow").textContent=t.category.toUpperCase();$("recordModalHelper").textContent=t.helper;$("dynamicFields").innerHTML=t.fields.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("");$("dueDateLabel").childNodes[0].nodeValue=`${t.dueLabel} `;}
-function openRecordModal(record=null){$("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks");$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:`Add ${toolById(moduleId).name}`;renderDynamicFields(moduleId,record);$("recordStatus").value=record?.status||"Open";$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
+function renderDynamicFields(moduleId,record=null){
+  const t=toolById(moduleId);
+  $("recordEyebrow").textContent=t.category.toUpperCase();
+  $("recordModalHelper").textContent=t.helper;
+  $("dynamicFields").innerHTML=t.fields.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("");
+  $("dueDateLabel").childNodes[0].nodeValue=`${t.dueLabel} `;
+  const currentStatus=record?.status||t.statuses[0];
+  $("recordStatus").innerHTML=t.statuses.map(s=>`<option value="${safeText(s)}">${safeText(s)}</option>`).join("");
+  $("recordStatus").value=currentStatus;
+}
+function openRecordModal(record=null){$("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks");$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:`Add ${toolById(moduleId).name}`;renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
 $("recordModule").addEventListener("change",()=>{$("recordModalTitle").textContent=`Add ${toolById($("recordModule").value).name}`;renderDynamicFields($("recordModule").value,null)});
 $("addRecordBtn").addEventListener("click",()=>openRecordModal());$("quickAddBtn").addEventListener("click",()=>openRecordModal());document.querySelectorAll("[data-close-record]").forEach(btn=>btn.addEventListener("click",()=>recordModal.classList.add("hidden")));recordModal.addEventListener("click",e=>{if(e.target===recordModal)recordModal.classList.add("hidden")});
 $("recordForm").addEventListener("submit",async e=>{
   e.preventDefault();const id=$("recordId").value,moduleId=$("recordModule").value,t=toolById(moduleId),fields={};let title="";
-  for(const f of t.fields){const el=$(`toolField_${f.key}`);const value=el?.value?.trim?el.value.trim():el?.value||"";if(f.key==="title")title=value;else fields[f.key]=value;}
+  for(const f of t.fields){
+    const el=$(`toolField_${f.key}`);
+    const value=el?.value?.trim?el.value.trim():el?.value||"";
+    if(f.required && !value){
+      $("recordMessage").textContent=`${f.label} is required.`;
+      el?.focus();
+      return;
+    }
+    if(f.key==="title")title=value;else fields[f.key]=value;
+  }
   const payload={module:moduleId,title,status:$("recordStatus").value,dueDate:$("recordDueDate").value||"",details:$("recordDetails").value.trim(),fields,updatedAt:serverTimestamp(),updatedBy:currentUser.uid};
   try{if(id)await updateDoc(doc(db,"businesses",business.id,"records",id),payload);else await addDoc(collection(db,"businesses",business.id,"records"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});await loadRecords();renderEverything();recordModal.classList.add("hidden");}catch(error){console.error(error);$("recordMessage").textContent="Could not save this item. Check Firestore rules.";}
 });
