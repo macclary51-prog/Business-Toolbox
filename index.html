@@ -148,6 +148,41 @@
     </div>
   </section>
 
+  <section class="owner-shell hidden" id="ownerShell">
+    <aside class="owner-sidebar">
+      <a class="brand sidebar-brand" href="#"><span class="brand-mark">SF</span><span class="brand-text">Silverforge <strong>Owner Console</strong></span></a>
+      <div class="business-block"><small>PLATFORM OWNER</small><strong id="ownerDisplayName">Silverforge Owner</strong><span id="ownerEmail"></span></div>
+      <nav class="sidebar-nav">
+        <button class="side-link active"><span>⌂</span> Platform Overview</button>
+      </nav>
+      <button class="btn btn-ghost sidebar-logout" id="ownerLogoutBtn">Log Out</button>
+    </aside>
+    <div class="app-main">
+      <header class="app-topbar owner-topbar">
+        <div><small>OWNER CONSOLE</small><h2>Business Toolbox Platform</h2></div>
+        <span class="owner-badge">Platform Owner</span>
+      </header>
+      <div class="app-content">
+        <section class="owner-dashboard">
+          <div class="stats-grid owner-stats">
+            <article class="stat-card"><span>Total Businesses</span><strong id="ownerStatBusinesses">0</strong></article>
+            <article class="stat-card"><span>Active Subscriptions</span><strong id="ownerStatActive">0</strong></article>
+            <article class="stat-card"><span>Setup Required</span><strong id="ownerStatSetup">0</strong></article>
+            <article class="stat-card"><span>Monthly Revenue</span><strong id="ownerStatRevenue">$0.00</strong></article>
+          </div>
+          <article class="panel owner-business-panel">
+            <div class="panel-heading owner-panel-heading">
+              <div><small>CUSTOMERS</small><h3>Business Accounts</h3></div>
+              <input class="input owner-search" id="ownerBusinessSearch" type="search" placeholder="Search businesses or owners..." />
+            </div>
+            <p class="panel-copy">Manage customer subscription status and platform access. Your platform-owner account is separate from customer business accounts.</p>
+            <div class="owner-business-list" id="ownerBusinessList"></div>
+          </article>
+        </section>
+      </div>
+    </div>
+  </section>
+
   <div class="modal-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal auth-modal-card">
       <button class="modal-close" data-close-modal aria-label="Close">×</button>
