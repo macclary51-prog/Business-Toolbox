@@ -120,3 +120,37 @@ button,input,select,textarea{font:inherit} button{cursor:pointer} a{color:inheri
   .owner-filter-bar .owner-search { grid-column:auto; }
   .owner-detail-item { grid-template-columns:1fr; gap:4px; }
 }
+
+
+/* OWNER TOOL CATALOG */
+.owner-tools-panel { margin-top:18px; }
+.owner-tools-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+.owner-tool-card {
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#0b192d;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.owner-tool-card-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.owner-tool-card-icon {
+  width:38px; height:38px; border-radius:10px; display:grid; place-items:center;
+  background:#11213a; border:1px solid var(--line); font-size:1.1rem;
+}
+.owner-tool-card-category {
+  color:var(--muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
+}
+.owner-tool-card h4 { margin:0; font-size:1rem; }
+.owner-tool-card p { margin:0; color:var(--muted); line-height:1.5; font-size:.78rem; }
+.owner-tool-usage {
+  margin-top:auto; padding-top:10px; border-top:1px solid rgba(255,255,255,.06);
+  display:flex; justify-content:space-between; gap:10px; align-items:center;
+}
+.owner-tool-usage span { color:var(--muted); font-size:.72rem; }
+.owner-tool-usage strong { font-size:.82rem; }
