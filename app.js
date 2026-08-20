@@ -1,17 +1,22 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, updateProfile
+  signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail, deleteUser
 } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc,
-  getDocs, deleteDoc, serverTimestamp, query, orderBy, limit
+  getDocs, deleteDoc, serverTimestamp, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// A secondary Firebase Auth instance lets a signed-in business owner create
+// employee accounts without replacing the owner's own login session.
+const employeeCreatorApp = initializeApp(firebaseConfig,"businessToolboxEmployeeCreator");
+const employeeCreatorAuth = getAuth(employeeCreatorApp);
 const $ = (id) => document.getElementById(id);
 
 const toolDefinitions = [
@@ -584,14 +589,38 @@ document.querySelectorAll("[data-auth-tab]").forEach(btn=>btn.addEventListener("
 document.querySelectorAll("[data-close-modal]").forEach(btn=>btn.addEventListener("click",()=>authModal.classList.add("hidden")));
 authModal.addEventListener("click",e=>{if(e.target===authModal)authModal.classList.add("hidden")});
 
-let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[];
+let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[],businessEmployees=[];
+
+function isBusinessOwnerAccount(){return userProfile?.role==="owner"}
+function isEmployeeAccount(){return userProfile?.role==="employee"}
+function employeePermissions(){return userProfile?.permissions||{}}
+function canCreateRecords(){return isBusinessOwnerAccount()||employeePermissions().canCreateRecords===true}
+function canEditRecords(){return isBusinessOwnerAccount()||employeePermissions().canEditRecords===true}
+function canDeleteRecords(){return isBusinessOwnerAccount()||employeePermissions().canDeleteRecords===true}
+function canViewMonthly(){return isBusinessOwnerAccount()||employeePermissions().canViewMonthly===true}
+function canExportRecords(){return isBusinessOwnerAccount()||employeePermissions().canExportRecords===true}
+function fullBusinessEnabledModules(){return Array.isArray(business?.enabledModules)?business.enabledModules:defaultEnabledModules}
+function accessibleModules(){
+  const businessModules=fullBusinessEnabledModules();
+  if(isBusinessOwnerAccount())return businessModules;
+  const allowed=Array.isArray(employeePermissions().allowedModules)?employeePermissions().allowedModules:[];
+  return businessModules.filter(id=>allowed.includes(id));
+}
+function canAccessModule(moduleId){return accessibleModules().includes(moduleId)}
+function canAccessBusinessView(name){
+  if(isBusinessOwnerAccount())return true;
+  if(name==="tools"||name==="employees"||name==="settings")return false;
+  if(name==="monthly"&&!canViewMonthly())return false;
+  return ["dashboard","monthly","records"].includes(name);
+}
+
 $("signupForm").addEventListener("submit",async e=>{
   e.preventDefault(); const message=$("authMessage"); message.className="form-message"; message.textContent="Creating account...";
   try{
     const businessName=$("signupBusinessName").value.trim(), ownerName=$("signupOwnerName").value.trim(), email=$("signupEmail").value.trim(), password=$("signupPassword").value;
     const credential=await createUserWithEmailAndPassword(auth,email,password); const uid=credential.user.uid; const businessId=crypto.randomUUID?crypto.randomUUID():`${uid}-${Date.now()}`;
     await updateProfile(credential.user,{displayName:ownerName});
-    await setDoc(doc(db,"users",uid),{displayName:ownerName,email,businessId,role:"owner",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    await setDoc(doc(db,"users",uid),{displayName:ownerName,email,businessId,role:"owner",active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     await setDoc(doc(db,"businesses",businessId),{name:businessName,ownerUid:uid,ownerName,phone:"",website:"",enabledModules:defaultEnabledModules,plan:platformSettings.defaultPlan||"starter",subscriptionStatus:"setup_required",platformStatus:"active",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     message.className="form-message success";message.textContent="Account created.";authModal.classList.add("hidden");
   }catch(error){console.error(error);message.textContent=friendlyAuthError(error.code);}
@@ -617,14 +646,44 @@ onAuthStateChanged(auth,async user=>{
     const userSnap=await getDoc(doc(db,"users",user.uid));
     if(!userSnap.exists())throw new Error("User profile not found.");
     userProfile={id:userSnap.id,...userSnap.data()};
+    if(userProfile.role==="employee" && userProfile.active!==true)throw new Error("Employee account is inactive.");
     const businessSnap=await getDoc(doc(db,"businesses",userProfile.businessId));
     if(!businessSnap.exists())throw new Error("Business record not found or access is suspended.");
     business={id:businessSnap.id,...businessSnap.data()};
-    await loadRecords();showApp();
+    if(userProfile.role==="owner"){
+      await Promise.all([loadRecords(),loadBusinessEmployees()]);
+    }else{
+      businessEmployees=[];
+      await loadRecords();
+    }
+    showApp();
   }catch(error){console.error(error);alert("This account could not be loaded. Check account access and Firestore setup.");await signOut(auth);}
 });
 function showPublic(){publicSite.classList.remove("hidden");publicFooter.classList.remove("hidden");appShell.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.remove("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public")}
-function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public");appShell.classList.remove("hidden");$("sidebarBusinessName").textContent=business.name;$("sidebarUserEmail").textContent=currentUser.email||"";$("settingsBusinessName").value=business.name||"";$("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";$("settingsPhone").value=business.phone||"";$("settingsWebsite").value=business.website||"";renderModuleOptions();renderEverything();switchView("dashboard")}
+function showApp(){
+  publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public");appShell.classList.remove("hidden");
+  $("sidebarBusinessName").textContent=business.name;
+  $("sidebarUserEmail").textContent=currentUser.email||"";
+  $("sidebarUserRole").textContent=isBusinessOwnerAccount()?"Business Owner":`Employee${userProfile.jobTitle?` • ${userProfile.jobTitle}`:""}`;
+  $("settingsBusinessName").value=business.name||"";
+  $("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";
+  $("settingsPhone").value=business.phone||"";
+  $("settingsWebsite").value=business.website||"";
+  applyBusinessAccountRoleUI();
+  renderModuleOptions();
+  renderEverything();
+  if(isBusinessOwnerAccount())renderEmployeeAccounts();
+  switchView("dashboard");
+}
+function applyBusinessAccountRoleUI(){
+  const owner=isBusinessOwnerAccount();
+  document.querySelectorAll("[data-business-owner-only]").forEach(el=>el.classList.toggle("hidden",!owner));
+  document.querySelectorAll("[data-go-tools]").forEach(el=>el.classList.toggle("hidden",!owner));
+  $("monthlyNavBtn").classList.toggle("hidden",!canViewMonthly());
+  $("quickAddBtn").classList.toggle("hidden",!canCreateRecords());
+  $("addRecordBtn").classList.toggle("hidden",!canCreateRecords());
+  $("exportRecordsBtn").classList.toggle("hidden",!canExportRecords());
+}
 
 
 const ownerViews={
@@ -1519,7 +1578,210 @@ $("ownerRefreshBtn").addEventListener("click",async()=>{
 });
 $("ownerLogoutBtn").addEventListener("click",()=>signOut(auth));
 
-async function loadRecords(){const ref=collection(db,"businesses",userProfile.businessId,"records");const snap=await getDocs(query(ref,orderBy("createdAt","desc")));records=snap.docs.map(d=>({id:d.id,...d.data()}));}
+
+async function loadBusinessEmployees(){
+  if(!isBusinessOwnerAccount()||!business){businessEmployees=[];return;}
+  const snap=await getDocs(query(collection(db,"users"),where("businessId","==",business.id)));
+  businessEmployees=snap.docs
+    .map(d=>({id:d.id,...d.data()}))
+    .filter(member=>member.role==="employee")
+    .sort((a,b)=>(a.displayName||a.email||"").localeCompare(b.displayName||b.email||""));
+}
+function employeeAllowedTools(employee){
+  const allowed=Array.isArray(employee.permissions?.allowedModules)?employee.permissions.allowedModules:[];
+  return fullBusinessEnabledModules().filter(id=>allowed.includes(id));
+}
+function renderEmployeeStats(){
+  if(!$("employeeStatTotal"))return;
+  const total=businessEmployees.length;
+  const active=businessEmployees.filter(e=>e.active===true).length;
+  const inactive=total-active;
+  const avg=total?Math.round(businessEmployees.reduce((sum,e)=>sum+employeeAllowedTools(e).length,0)/total):0;
+  $("employeeStatTotal").textContent=total;
+  $("employeeStatActive").textContent=active;
+  $("employeeStatInactive").textContent=inactive;
+  $("employeeStatToolAccess").textContent=avg;
+}
+function employeePermissionLabels(employee){
+  const p=employee.permissions||{},labels=[];
+  if(p.canCreateRecords)labels.push("Create");
+  if(p.canEditRecords)labels.push("Edit");
+  if(p.canDeleteRecords)labels.push("Delete");
+  if(p.canViewMonthly)labels.push("Monthly");
+  if(p.canExportRecords)labels.push("Export");
+  return labels;
+}
+function renderEmployeeAccounts(){
+  if(!isBusinessOwnerAccount()||!$("employeeAccountList"))return;
+  renderEmployeeStats();
+  const q=$("employeeSearch").value.trim().toLowerCase();
+  const filtered=businessEmployees.filter(e=>!q||`${e.displayName||""} ${e.email||""} ${e.jobTitle||""}`.toLowerCase().includes(q));
+  $("employeeResultCount").textContent=`${filtered.length} employee${filtered.length===1?"":"s"}`;
+  $("employeeAccountList").innerHTML=filtered.length?filtered.map(e=>{
+    const tools=employeeAllowedTools(e),permissions=employeePermissionLabels(e);
+    return `<div class="employee-account-row">
+      <div class="employee-account-main">
+        <strong>${safeText(e.displayName||"Unnamed Employee")}</strong>
+        <span>${safeText(e.email||"")}</span>
+        <span>${safeText(e.jobTitle||"No job title")}</span>
+      </div>
+      <div class="employee-account-meta">
+        <strong>Account</strong>
+        <span class="owner-status ${e.active===true?"active":"suspended"}">${e.active===true?"Active":"Inactive"}</span>
+        <span>Created ${safeText(formatOwnerDate(e.createdAt))}</span>
+      </div>
+      <div class="employee-account-meta">
+        <strong>${tools.length} Allowed Tool${tools.length===1?"":"s"}</strong>
+        <span>${tools.length?tools.slice(0,4).map(id=>toolById(id).name).join(", "):"No tool access"}${tools.length>4?` +${tools.length-4} more`:""}</span>
+        <div class="employee-permission-chips">${permissions.map(p=>`<span class="employee-permission-chip">${safeText(p)}</span>`).join("")||'<span class="employee-permission-chip">View only</span>'}</div>
+      </div>
+      <div class="employee-account-actions">
+        <button class="mini-btn" data-edit-employee="${e.id}">Edit Access</button>
+        <button class="mini-btn" data-reset-employee="${e.id}">Reset Password</button>
+        <button class="mini-btn ${e.active===true?"danger":""}" data-toggle-employee="${e.id}" data-next-active="${e.active===true?"false":"true"}">${e.active===true?"Deactivate":"Reactivate"}</button>
+      </div>
+    </div>`;
+  }).join(""):'<div class="empty-state">No employee accounts match this search.</div>';
+
+  document.querySelectorAll("[data-edit-employee]").forEach(btn=>btn.onclick=()=>openEmployeeModal(businessEmployees.find(e=>e.id===btn.dataset.editEmployee)));
+  document.querySelectorAll("[data-reset-employee]").forEach(btn=>btn.onclick=()=>sendEmployeePasswordReset(businessEmployees.find(e=>e.id===btn.dataset.resetEmployee)));
+  document.querySelectorAll("[data-toggle-employee]").forEach(btn=>btn.onclick=async()=>{
+    const employee=businessEmployees.find(e=>e.id===btn.dataset.toggleEmployee);
+    if(!employee)return;
+    const next=btn.dataset.nextActive==="true";
+    const question=next?`Reactivate ${employee.displayName||employee.email}?`:`Deactivate ${employee.displayName||employee.email}? They will immediately lose business access.`;
+    if(!confirm(question))return;
+    await updateDoc(doc(db,"users",employee.id),{active:next,updatedAt:serverTimestamp(),updatedBy:currentUser.uid});
+    employee.active=next;
+    renderEmployeeAccounts();
+  });
+}
+function renderEmployeeToolAccess(selected=[]){
+  const enabled=fullBusinessEnabledModules();
+  const selectedSet=new Set(selected);
+  $("employeeToolAccessGrid").innerHTML=toolDefinitions.filter(t=>enabled.includes(t.id)).map(t=>`
+    <label class="employee-tool-access">
+      <input type="checkbox" data-employee-tool="${t.id}" ${selectedSet.has(t.id)?"checked":""}/>
+      <span>${safeText(t.icon)} ${safeText(t.name)}</span>
+    </label>`).join("")||'<div class="empty-state">Enable business tools before assigning employee access.</div>';
+}
+function selectedEmployeeTools(){
+  return [...document.querySelectorAll("[data-employee-tool]:checked")].map(el=>el.dataset.employeeTool);
+}
+function openEmployeeModal(employee=null){
+  if(!isBusinessOwnerAccount())return;
+  $("employeeForm").reset();
+  $("employeeMessage").textContent="";
+  $("employeeUid").value=employee?.id||"";
+  $("employeeName").value=employee?.displayName||"";
+  $("employeeJobTitle").value=employee?.jobTitle||"";
+  $("employeeEmail").value=employee?.email||"";
+  $("employeeEmail").disabled=!!employee;
+  $("employeePassword").value="";
+  $("employeePassword").required=!employee;
+  $("employeePasswordLabel").classList.toggle("hidden",!!employee);
+  $("employeeResetPasswordBtn").classList.toggle("hidden",!employee);
+  $("employeeModalTitle").textContent=employee?"Edit Employee Access":"Add Employee";
+  $("employeeModalHelper").textContent=employee
+    ?"Change this employee's business permissions and tool access."
+    :"Create a login for this business. The business owner stays signed in while the employee account is created.";
+  $("employeeSaveBtn").textContent=employee?"Save Employee Access":"Create Employee";
+
+  const p=employee?.permissions||{};
+  $("employeeCanCreate").checked=employee?p.canCreateRecords===true:true;
+  $("employeeCanEdit").checked=employee?p.canEditRecords===true:true;
+  $("employeeCanDelete").checked=employee?p.canDeleteRecords===true:false;
+  $("employeeCanMonthly").checked=employee?p.canViewMonthly===true:true;
+  $("employeeCanExport").checked=employee?p.canExportRecords===true:false;
+  renderEmployeeToolAccess(employee?employeeAllowedTools(employee):fullBusinessEnabledModules());
+  $("employeeModal").classList.remove("hidden");
+}
+async function sendEmployeePasswordReset(employee){
+  if(!employee?.email)return;
+  try{
+    await sendPasswordResetEmail(auth,employee.email);
+    alert(`Password reset email sent to ${employee.email}.`);
+  }catch(error){
+    console.error(error);
+    alert(friendlyAuthError(error.code));
+  }
+}
+$("employeeSearch").addEventListener("input",renderEmployeeAccounts);
+$("addEmployeeBtn").addEventListener("click",()=>openEmployeeModal());
+document.querySelectorAll("[data-close-employee]").forEach(btn=>btn.addEventListener("click",()=>$("employeeModal").classList.add("hidden")));
+$("employeeModal").addEventListener("click",e=>{if(e.target===$("employeeModal"))$("employeeModal").classList.add("hidden")});
+$("employeeSelectAllTools").addEventListener("click",()=>document.querySelectorAll("[data-employee-tool]").forEach(cb=>cb.checked=true));
+$("employeeClearTools").addEventListener("click",()=>document.querySelectorAll("[data-employee-tool]").forEach(cb=>cb.checked=false));
+$("employeeResetPasswordBtn").addEventListener("click",()=>{
+  const employee=businessEmployees.find(e=>e.id===$("employeeUid").value);
+  if(employee)sendEmployeePasswordReset(employee);
+});
+$("employeeForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!isBusinessOwnerAccount())return;
+  const id=$("employeeUid").value;
+  const displayName=$("employeeName").value.trim();
+  const jobTitle=$("employeeJobTitle").value.trim();
+  const email=$("employeeEmail").value.trim().toLowerCase();
+  const permissions={
+    canCreateRecords:$("employeeCanCreate").checked,
+    canEditRecords:$("employeeCanEdit").checked,
+    canDeleteRecords:$("employeeCanDelete").checked,
+    canViewMonthly:$("employeeCanMonthly").checked,
+    canExportRecords:$("employeeCanExport").checked,
+    allowedModules:selectedEmployeeTools()
+  };
+  $("employeeMessage").className="form-message";
+  $("employeeMessage").textContent=id?"Saving employee access...":"Creating employee login...";
+
+  try{
+    if(id){
+      await updateDoc(doc(db,"users",id),{
+        displayName,jobTitle,permissions,updatedAt:serverTimestamp(),updatedBy:currentUser.uid
+      });
+    }else{
+      const password=$("employeePassword").value;
+      if(password.length<6){$("employeeMessage").textContent="Temporary password must be at least 6 characters.";return;}
+      let credential=null;
+      try{
+        credential=await createUserWithEmailAndPassword(employeeCreatorAuth,email,password);
+        await updateProfile(credential.user,{displayName});
+        await setDoc(doc(db,"users",credential.user.uid),{
+          displayName,email,jobTitle,businessId:business.id,role:"employee",active:true,permissions,
+          createdBy:currentUser.uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),updatedBy:currentUser.uid
+        });
+      }catch(error){
+        if(credential?.user)await deleteUser(credential.user).catch(()=>{});
+        throw error;
+      }finally{
+        await signOut(employeeCreatorAuth).catch(()=>{});
+      }
+    }
+    await loadBusinessEmployees();
+    renderEmployeeAccounts();
+    $("employeeModal").classList.add("hidden");
+  }catch(error){
+    console.error(error);
+    $("employeeMessage").textContent=friendlyAuthError(error.code)||"Could not save employee account.";
+  }
+});
+
+async function loadRecords(){
+  const ref=collection(db,"businesses",userProfile.businessId,"records");
+  if(isBusinessOwnerAccount()){
+    const snap=await getDocs(query(ref,orderBy("createdAt","desc")));
+    records=snap.docs.map(d=>({id:d.id,...d.data()}));
+    return;
+  }
+  const modules=accessibleModules();
+  if(!modules.length){records=[];return;}
+  const snapshots=await Promise.all(modules.map(moduleId=>getDocs(query(ref,where("module","==",moduleId)))));
+  records=snapshots.flatMap(snap=>snap.docs.map(d=>({id:d.id,...d.data()}))).sort((a,b)=>{
+    const ad=recordDateForMonthly(a)?.getTime()||0;
+    const bd=recordDateForMonthly(b)?.getTime()||0;
+    return bd-ad;
+  });
+}
 
 function recordDateForMonthly(record){
   const value=record.createdAt||record.updatedAt;
@@ -1695,12 +1957,23 @@ function renderMonthlyOverview(){
   renderDashboardMonthSnapshot();
 }
 
-function enabledModules(){return Array.isArray(business.enabledModules)?business.enabledModules:defaultEnabledModules}
+function enabledModules(){return accessibleModules()}
 function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot()}
 function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!completedStatus(r)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||completedStatus(r))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
 function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,12).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{switchView("records");$("recordModuleFilter").value=btn.dataset.toolOpen;renderRecords();});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
-function renderModuleSettings(){const enabled=new Set(enabledModules());$("moduleSettingsGrid").innerHTML=toolDefinitions.map(t=>`<div class="module-setting"><div><strong>${safeText(t.icon)} ${safeText(t.name)}</strong><small>${enabled.has(t.id)?"Enabled":"Disabled"}</small></div><button class="toggle ${enabled.has(t.id)?"on":""}" data-module-toggle="${t.id}" aria-label="Toggle ${safeText(t.name)}"></button></div>`).join("");document.querySelectorAll("[data-module-toggle]").forEach(btn=>btn.onclick=async()=>{const id=btn.dataset.moduleToggle,next=new Set(enabledModules());next.has(id)?next.delete(id):next.add(id);business.enabledModules=[...next];await updateDoc(doc(db,"businesses",business.id),{enabledModules:business.enabledModules,updatedAt:serverTimestamp()});renderEverything();});}
+function renderModuleSettings(){
+  if(!isBusinessOwnerAccount()){$("moduleSettingsGrid").innerHTML="";return;}
+  const enabled=new Set(fullBusinessEnabledModules());
+  $("moduleSettingsGrid").innerHTML=toolDefinitions.map(t=>`<div class="module-setting"><div><strong>${safeText(t.icon)} ${safeText(t.name)}</strong><small>${enabled.has(t.id)?"Enabled":"Disabled"}</small></div><button class="toggle ${enabled.has(t.id)?"on":""}" data-module-toggle="${t.id}" aria-label="Toggle ${safeText(t.name)}"></button></div>`).join("");
+  document.querySelectorAll("[data-module-toggle]").forEach(btn=>btn.onclick=async()=>{
+    const id=btn.dataset.moduleToggle,next=new Set(fullBusinessEnabledModules());
+    next.has(id)?next.delete(id):next.add(id);
+    business.enabledModules=[...next];
+    await updateDoc(doc(db,"businesses",business.id),{enabledModules:business.enabledModules,updatedAt:serverTimestamp()});
+    renderModuleOptions();renderEverything();renderEmployeeAccounts();
+  });
+}
 
 
 function recordFieldPreview(record){
@@ -1813,13 +2086,17 @@ function getRecordAction(record){
       return null;
   }
 }
+function recordActionRequiresEdit(action){
+  return !["open_website","open_qr_link","copy_asset_id"].includes(action);
+}
 function quickActionButton(record){
   const a=getRecordAction(record);
   if(!a)return "";
+  if(recordActionRequiresEdit(a.key)&&!canEditRecords())return "";
   return `<button class="mini-btn ${a.primary?"record-action-primary":""} ${a.success?"record-action-success":""}" data-record-action="${a.key}" data-record-id="${record.id}">${safeText(a.label)}</button>`;
 }
 function recurringNextButton(record){
-  if(record.module!=="tasks"||!completedStatus(record))return "";
+  if(!canCreateRecords()||record.module!=="tasks"||!completedStatus(record))return "";
   const recurring=record.fields?.recurring;
   if(!recurring||recurring==="No")return "";
   return `<button class="mini-btn" data-record-action="create_next_task" data-record-id="${record.id}">Create Next</button>`;
@@ -1842,9 +2119,9 @@ function recordHtml(r){
       ${quickActionButton(r)}
       ${recurringNextButton(r)}
       <button class="mini-btn" data-view-record="${r.id}">View</button>
-      <button class="mini-btn" data-duplicate-record="${r.id}">Duplicate</button>
-      <button class="mini-btn" data-edit-record="${r.id}">Edit</button>
-      <button class="mini-btn danger" data-delete-record="${r.id}">Delete</button>
+      ${canCreateRecords()?`<button class="mini-btn" data-duplicate-record="${r.id}">Duplicate</button>`:""}
+      ${canEditRecords()?`<button class="mini-btn" data-edit-record="${r.id}">Edit</button>`:""}
+      ${canDeleteRecords()?`<button class="mini-btn danger" data-delete-record="${r.id}">Delete</button>`:""}
     </div>
   </div>`;
 }
@@ -1904,6 +2181,7 @@ function csvEscape(value){
   return `"${s.replaceAll('"','""')}"`;
 }
 function exportRecordsCsv(){
+  if(!canExportRecords()){alert("Your employee account does not have permission to export records.");return;}
   const rows=currentFilteredRecords.length?currentFilteredRecords:records;
   if(!rows.length){alert("There are no records to export.");return;}
   const allFieldKeys=[...new Set(rows.flatMap(r=>Object.keys(r.fields||{})))];
@@ -1924,6 +2202,7 @@ function exportRecordsCsv(){
   document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 async function patchRecord(record,updates){
+  if(!canEditRecords())throw new Error("This account cannot edit records.");
   await updateDoc(doc(db,"businesses",business.id,"records",record.id),{
     ...updates,
     updatedAt:serverTimestamp(),
@@ -1933,6 +2212,7 @@ async function patchRecord(record,updates){
   renderEverything();
 }
 async function duplicateRecord(record){
+  if(!canCreateRecords()){alert("Your account cannot create records.");return;}
   const payload={
     module:record.module,
     title:`${record.title||"Untitled"} Copy`,
@@ -2019,11 +2299,12 @@ function openRecordDetail(record){
   $("recordDetailFields").innerHTML=recordDetailFieldRows(record);
   $("recordDetailNotes").innerHTML=record.details?`<strong>Notes</strong><br>${safeText(record.details)}`:"No additional notes.";
   const a=getRecordAction(record);
+  const canRunAction=a&&(!recordActionRequiresEdit(a.key)||canEditRecords());
   $("recordDetailActions").innerHTML=`
-    ${a?`<button class="btn btn-primary" data-detail-record-action="${a.key}" data-record-id="${record.id}">${safeText(a.label)}</button>`:""}
+    ${canRunAction?`<button class="btn btn-primary" data-detail-record-action="${a.key}" data-record-id="${record.id}">${safeText(a.label)}</button>`:""}
     ${recurringNextButton(record).replaceAll("data-record-action=","data-detail-record-action=")}
-    <button class="btn btn-secondary" data-detail-edit="${record.id}">Edit</button>
-    <button class="btn btn-secondary" data-detail-duplicate="${record.id}">Duplicate</button>`;
+    ${canEditRecords()?`<button class="btn btn-secondary" data-detail-edit="${record.id}">Edit</button>`:""}
+    ${canCreateRecords()?`<button class="btn btn-secondary" data-detail-duplicate="${record.id}">Duplicate</button>`:""}`;
   document.querySelectorAll("[data-detail-record-action]").forEach(btn=>btn.onclick=async()=>{
     $("recordDetailModal").classList.add("hidden");
     await handleRecordQuickAction(records.find(r=>r.id===btn.dataset.recordId),btn.dataset.detailRecordAction);
@@ -2047,6 +2328,8 @@ function calculateSupplyStatus(fields){
 }
 async function handleRecordQuickAction(record,action){
   if(!record)return;
+  if(action==="create_next_task"&&!canCreateRecords()){alert("Your employee account cannot create records.");return;}
+  if(recordActionRequiresEdit(action)&&!canEditRecords()){alert("Your employee account cannot edit records.");return;}
   const fields={...(record.fields||{})};
   switch(action){
     case "complete": return patchRecord(record,{status:"Complete"});
@@ -2163,6 +2446,7 @@ function bindRecordActions(){
   document.querySelectorAll("[data-duplicate-record]").forEach(btn=>btn.onclick=async()=>duplicateRecord(records.find(r=>r.id===btn.dataset.duplicateRecord)));
   document.querySelectorAll("[data-record-action]").forEach(btn=>btn.onclick=async()=>handleRecordQuickAction(records.find(r=>r.id===btn.dataset.recordId),btn.dataset.recordAction));
   document.querySelectorAll("[data-delete-record]").forEach(btn=>btn.onclick=async()=>{
+    if(!canDeleteRecords()){alert("Your employee account cannot delete records.");return;}
     if(!confirm("Delete this record?"))return;
     await deleteDoc(doc(db,"businesses",business.id,"records",btn.dataset.deleteRecord));
     records=records.filter(r=>r.id!==btn.dataset.deleteRecord);
@@ -2200,11 +2484,18 @@ function renderDynamicFields(moduleId,record=null){
   $("recordStatus").innerHTML=t.statuses.map(s=>`<option value="${safeText(s)}">${safeText(s)}</option>`).join("");
   $("recordStatus").value=currentStatus;
 }
-function openRecordModal(record=null){$("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks");$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:`Add ${toolById(moduleId).name}`;renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
+function openRecordModal(record=null){
+  if(record&&!canEditRecords()){alert("Your employee account cannot edit records.");return;}
+  if(!record&&!canCreateRecords()){alert("Your employee account cannot create records.");return;}
+  $("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks");$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:`Add ${toolById(moduleId).name}`;renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
 $("recordModule").addEventListener("change",()=>{$("recordModalTitle").textContent=`Add ${toolById($("recordModule").value).name}`;renderDynamicFields($("recordModule").value,null)});
 $("addRecordBtn").addEventListener("click",()=>openRecordModal());$("quickAddBtn").addEventListener("click",()=>openRecordModal());document.querySelectorAll("[data-close-record]").forEach(btn=>btn.addEventListener("click",()=>recordModal.classList.add("hidden")));recordModal.addEventListener("click",e=>{if(e.target===recordModal)recordModal.classList.add("hidden")});
 $("recordForm").addEventListener("submit",async e=>{
-  e.preventDefault();const id=$("recordId").value,moduleId=$("recordModule").value,t=toolById(moduleId),fields={};let title="";
+  e.preventDefault();
+  const id=$("recordId").value,moduleId=$("recordModule").value,t=toolById(moduleId),fields={};let title="";
+  if(!canAccessModule(moduleId)){$("recordMessage").textContent="Your account does not have access to this tool.";return;}
+  if(id&&!canEditRecords()){$("recordMessage").textContent="Your account cannot edit records.";return;}
+  if(!id&&!canCreateRecords()){$("recordMessage").textContent="Your account cannot create records.";return;}
   for(const f of t.fields){
     const el=$(`toolField_${f.key}`);
     const value=el?.value?.trim?el.value.trim():el?.value||"";
@@ -2225,8 +2516,17 @@ $("recordForm").addEventListener("submit",async e=>{
   try{if(id)await updateDoc(doc(db,"businesses",business.id,"records",id),payload);else await addDoc(collection(db,"businesses",business.id,"records"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});await loadRecords();renderEverything();recordModal.classList.add("hidden");}catch(error){console.error(error);$("recordMessage").textContent="Could not save this item. Check Firestore rules.";}
 });
 
-$("businessSettingsForm").addEventListener("submit",async e=>{e.preventDefault();const updates={name:$("settingsBusinessName").value.trim(),ownerName:$("settingsOwnerName").value.trim(),phone:$("settingsPhone").value.trim(),website:$("settingsWebsite").value.trim(),updatedAt:serverTimestamp()};await updateDoc(doc(db,"businesses",business.id),updates);Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");});
+$("businessSettingsForm").addEventListener("submit",async e=>{e.preventDefault();if(!isBusinessOwnerAccount()){alert("Only the business owner can change business settings.");return;}const updates={name:$("settingsBusinessName").value.trim(),ownerName:$("settingsOwnerName").value.trim(),phone:$("settingsPhone").value.trim(),website:$("settingsWebsite").value.trim(),updatedAt:serverTimestamp()};await updateDoc(doc(db,"businesses",business.id),updates);Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");});
 if($("monthlyPicker")){$("monthlyPicker").value=monthKeyFromDate(new Date());$("monthlyPicker").addEventListener("change",renderMonthlyOverview);$("monthlyPrevBtn").addEventListener("click",()=>shiftMonth(-1));$("monthlyNextBtn").addEventListener("click",()=>shiftMonth(1));}
-const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
-function switchView(name){Object.entries(views).forEach(([key,[el]])=>el.classList.toggle("hidden",key!==name));document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));$("viewEyebrow").textContent=views[name][1];$("viewTitle").textContent=views[name][2];if(window.innerWidth<=780)$("sidebar").classList.remove("open");}
+const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
+function switchView(name){
+  if(!views[name])return;
+  if(!canAccessBusinessView(name)){name="dashboard";}
+  Object.entries(views).forEach(([key,[el]])=>el.classList.toggle("hidden",key!==name));
+  document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));
+  $("viewEyebrow").textContent=views[name][1];
+  $("viewTitle").textContent=views[name][2];
+  if(name==="employees"&&isBusinessOwnerAccount())renderEmployeeAccounts();
+  if(window.innerWidth<=780)$("sidebar").classList.remove("open");
+}
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>switchView(btn.dataset.view)));document.querySelectorAll("[data-go-tools]").forEach(btn=>btn.addEventListener("click",()=>switchView("tools")));$("sidebarToggle").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
