@@ -1568,34 +1568,125 @@ function ownerPreviewFieldHtml(field){
 }
 
 function openOwnerToolPreview(id){
-  const t=toolById(id);
+  const t=toolById(id),cfg=toolExperience(id);
   if(!t)return;
+
+  const workflowNames={
+    taskBoard:"Task Board",
+    checklistLibrary:"Checklist Library",
+    assetInventory:"Asset Inventory",
+    serviceTimeline:"Service Timeline",
+    renewalRadar:"Renewal Radar",
+    incidentCases:"Incident Case Manager",
+    handoffFeed:"Shift Handoff Feed",
+    checkoutDesk:"Checkout Desk",
+    logbookTimeline:"Daily Log Timeline",
+    employeeDirectory:"Employee Directory",
+    fleetDashboard:"Fleet Dashboard",
+    proofGallery:"Photo Proof Gallery",
+    vendorDirectory:"Vendor Directory",
+    subscriptionLedger:"Subscription Ledger",
+    documentRegister:"Document Register",
+    trainingMatrix:"Training Matrix",
+    websiteStatus:"Website Status Dashboard",
+    qrLabels:"QR Asset Labels",
+    supplyInventory:"Supply Inventory",
+    warrantyCoverage:"Warranty Coverage",
+    complaintPipeline:"Complaint Pipeline",
+    ideaBoard:"Idea Board",
+    receptionDesk:"Reception Desk",
+    packageQueue:"Package Queue"
+  };
 
   $("ownerToolPreviewIcon").textContent=t.icon||"•";
   $("ownerToolPreviewCategory").textContent=(t.category||"Other").toUpperCase();
   $("ownerToolPreviewTitle").textContent=t.name||"Tool Preview";
   $("ownerToolPreviewDescription").textContent=t.desc||"";
-  $("ownerToolPreviewHelper").textContent=t.helper||t.desc||"—";
+  $("ownerToolPreviewHelper").textContent=workflowNames[cfg.mode]||"Custom Workspace";
   $("ownerToolPreviewDueLabel").textContent=t.dueLabel||"Due Date";
   $("ownerToolPreviewStatusCount").textContent=String((t.statuses||[]).length);
   $("ownerToolPreviewFieldCount").textContent=String((t.fields||[]).length);
-  $("ownerPreviewToolName").value=t.name||"";
+  $("ownerPreviewToolName").value=`${t.name} — ${workflowNames[cfg.mode]||"Custom Workspace"}`;
 
-  const rendered=(t.fields||[]).map(ownerPreviewFieldHtml);
-  $("ownerToolPreviewFields").innerHTML=rendered.map(x=>x.form).join("");
-  $("ownerToolConfigList").innerHTML=rendered.map(x=>x.config).join("");
+  const fieldMap=new Map((t.fields||[]).map(f=>[f.key,f]));
+  const used=new Set();
+  const configRows=[];
+
+  const sectionHtml=(cfg.sections||[]).map(section=>{
+    const fields=(section.keys||[]).map(key=>fieldMap.get(key)).filter(Boolean);
+    fields.forEach(f=>used.add(f.key));
+    if(!fields.length)return "";
+
+    const rendered=fields.map(ownerPreviewFieldHtml);
+    configRows.push(`<div class="owner-preview-workflow-config">
+      <strong>${safeText(section.title)}</strong>
+      <span>${safeText(section.hint||"")}</span>
+    </div>`, ...rendered.map(x=>x.config));
+
+    return `<section class="owner-preview-unique-section">
+      <div class="owner-preview-unique-section-head">
+        <strong>${safeText(section.title)}</strong>
+        <span>${safeText(section.hint||"")}</span>
+      </div>
+      <div class="owner-preview-unique-fields">${rendered.map(x=>x.form).join("")}</div>
+    </section>`;
+  }).join("");
+
+  const leftovers=(t.fields||[]).filter(f=>!used.has(f.key));
+  let leftoverHtml="";
+  if(leftovers.length){
+    const rendered=leftovers.map(ownerPreviewFieldHtml);
+    configRows.push(`<div class="owner-preview-workflow-config"><strong>Additional Details</strong><span>Other information tracked by this tool.</span></div>`,...rendered.map(x=>x.config));
+    leftoverHtml=`<section class="owner-preview-unique-section">
+      <div class="owner-preview-unique-section-head"><strong>Additional Details</strong><span>Other information tracked by this tool.</span></div>
+      <div class="owner-preview-unique-fields">${rendered.map(x=>x.form).join("")}</div>
+    </section>`;
+  }
+
+  $("ownerToolPreviewFields").className="dynamic-fields owner-preview-dynamic-fields owner-preview-unique-form";
+  $("ownerToolPreviewFields").innerHTML=`
+    <div class="owner-preview-workflow-banner">
+      <span class="tool-form-context-icon">${safeText(t.icon)}</span>
+      <div>
+        <small>UNIQUE CUSTOMER WORKSPACE</small>
+        <strong>${safeText(workflowNames[cfg.mode]||"Custom Workspace")}</strong>
+        <span>${safeText(cfg.formIntro||t.desc||"")}</span>
+      </div>
+    </div>
+    ${sectionHtml}
+    ${leftoverHtml}`;
+
+  $("ownerToolConfigList").innerHTML=`
+    <div class="owner-preview-workflow-config highlight">
+      <strong>${safeText(cfg.addLabel||"+ Add")}</strong>
+      <span>Primary create action</span>
+    </div>
+    <div class="owner-preview-workflow-config highlight">
+      <strong>${safeText(workflowNames[cfg.mode]||"Custom Workspace")}</strong>
+      <span>Customer workspace layout</span>
+    </div>
+    ${configRows.join("")}`;
 
   $("ownerToolPreviewStatus").innerHTML=(t.statuses||["Open","In Progress","Complete","Archived"])
     .map(s=>`<option>${safeText(s)}</option>`).join("");
 
   $("ownerToolPreviewDueField").childNodes[0].nodeValue=`${t.dueLabel||"Due Date"} `;
 
-  $("ownerToolPreviewBullets").innerHTML=(t.bullets||[])
-    .map(item=>`<li>${safeText(item)}</li>`).join("");
+  $("ownerToolPreviewBullets").innerHTML=[
+    `Workspace: ${workflowNames[cfg.mode]||"Custom Workspace"}`,
+    `Create action: ${cfg.addLabel||"+ Add"}`,
+    `Form sections: ${(cfg.sections||[]).map(s=>s.title).join(" • ")}`,
+    ...(t.bullets||[])
+  ].map(item=>`<li>${safeText(item)}</li>`).join("");
+
+  const notesLabel=$("ownerToolPreviewFields").closest(".owner-preview-form")?.querySelector("label:last-of-type");
+  if(notesLabel){
+    const textNode=[...notesLabel.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
+    if(textNode)textNode.nodeValue=`${cfg.notes||"Notes"} `;
+  }
 
   $("ownerToolPreviewModal").classList.remove("hidden");
 }
-
 document.querySelectorAll("[data-close-owner-tool-preview]").forEach(btn=>{
   btn.addEventListener("click",()=>$("ownerToolPreviewModal").classList.add("hidden"));
 });
