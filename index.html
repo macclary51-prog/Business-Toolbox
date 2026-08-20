@@ -140,6 +140,19 @@
       <div class="app-content">
         <section class="app-view" id="dashboardView">
           <div class="stats-grid"><article class="stat-card"><span>Open Records</span><strong id="statOpen">0</strong></article><article class="stat-card"><span>Due Soon</span><strong id="statDue">0</strong></article><article class="stat-card"><span>Active Tools</span><strong id="statTools">0</strong></article><article class="stat-card"><span>Total Records</span><strong id="statTotal">0</strong></article></div>
+          <article class="panel dashboard-month-snapshot">
+            <div class="panel-heading">
+              <div><small>THIS MONTH</small><h3>Business Snapshot</h3></div>
+              <button class="text-btn" data-view="monthly">View Monthly Overview</button>
+            </div>
+            <div class="dashboard-month-grid">
+              <div><span>Created</span><strong id="dashMonthCreated">0</strong></div>
+              <div><span>Completed</span><strong id="dashMonthCompleted">0</strong></div>
+              <div><span>Overdue</span><strong id="dashMonthOverdue">0</strong></div>
+              <div><span>Due Next 7 Days</span><strong id="dashMonthDueSoon">0</strong></div>
+            </div>
+          </article>
+
           <div class="app-grid-two"><article class="panel"><div class="panel-heading"><div><small>QUICK ACCESS</small><h3>Your Tools</h3></div><button class="text-btn" data-go-tools>Manage</button></div><div class="tool-grid" id="dashboardToolGrid"></div></article><article class="panel"><div class="panel-heading"><div><small>RECENT</small><h3>Latest Activity</h3></div></div><div class="record-list compact" id="recentRecords"></div></article></div>
         </section>
         <section class="app-view hidden" id="monthlyView">
@@ -148,11 +161,41 @@
             <div class="monthly-controls"><button class="mini-btn" id="monthlyPrevBtn" type="button">← Previous</button><input class="input" id="monthlyPicker" type="month" /><button class="mini-btn" id="monthlyNextBtn" type="button">Next →</button></div>
           </div>
           <div class="stats-grid monthly-stats">
-            <article class="stat-card"><span>Records Created</span><strong id="monthlyStatCreated">0</strong></article>
-            <article class="stat-card"><span>Completed / Resolved</span><strong id="monthlyStatCompleted">0</strong></article>
-            <article class="stat-card"><span>Still Open</span><strong id="monthlyStatOpen">0</strong></article>
-            <article class="stat-card"><span>Active Tools</span><strong id="monthlyStatTools">0</strong></article>
+            <article class="stat-card"><span>Records Created</span><strong id="monthlyStatCreated">0</strong><small id="monthlyCreatedCompare">—</small></article>
+            <article class="stat-card"><span>Completed / Resolved</span><strong id="monthlyStatCompleted">0</strong><small id="monthlyCompletedCompare">—</small></article>
+            <article class="stat-card"><span>Still Open</span><strong id="monthlyStatOpen">0</strong><small id="monthlyOpenCompare">—</small></article>
+            <article class="stat-card"><span>Active Tools</span><strong id="monthlyStatTools">0</strong><small id="monthlyToolsCompare">—</small></article>
           </div>
+          <div class="monthly-insight-grid">
+            <article class="panel monthly-highlight-card">
+              <div class="panel-heading"><div><small>ATTENTION</small><h3>Overdue & Due Soon</h3></div></div>
+              <div class="monthly-attention-list" id="monthlyAttentionList"></div>
+            </article>
+
+            <article class="panel monthly-highlight-card">
+              <div class="panel-heading"><div><small>BUSINESS COSTS</small><h3>Tracked Costs</h3></div></div>
+              <div class="monthly-cost-grid">
+                <div><span>Maintenance</span><strong id="monthlyMaintenanceCost">$0.00</strong></div>
+                <div><span>Subscriptions</span><strong id="monthlySubscriptionCost">$0.00</strong></div>
+                <div><span>Total Tracked</span><strong id="monthlyTrackedCost">$0.00</strong></div>
+              </div>
+            </article>
+          </div>
+
+          <article class="panel monthly-kpi-panel">
+            <div class="panel-heading">
+              <div><small>TOOL INSIGHTS</small><h3>Business Activity Summary</h3></div>
+            </div>
+            <div class="monthly-kpi-grid" id="monthlyKpiGrid"></div>
+          </article>
+
+          <article class="panel monthly-trend-panel">
+            <div class="panel-heading">
+              <div><small>6-MONTH TREND</small><h3>Activity History</h3></div>
+            </div>
+            <div class="monthly-trend-chart" id="monthlyTrendChart"></div>
+          </article>
+
           <div class="app-grid-two monthly-grid">
             <article class="panel"><div class="panel-heading"><div><small>BY TOOL</small><h3>Monthly Activity</h3></div></div><div id="monthlyToolActivity" class="monthly-tool-list"></div></article>
             <article class="panel"><div class="panel-heading"><div><small>STATUS</small><h3>Record Breakdown</h3></div></div><div id="monthlyStatusBreakdown" class="monthly-status-list"></div></article>
