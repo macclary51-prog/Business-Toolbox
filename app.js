@@ -533,12 +533,14 @@ onAuthStateChanged(auth,async user=>{
     await loadRecords();showApp();
   }catch(error){console.error(error);alert("This account could not be loaded. Check account access and Firestore setup.");await signOut(auth);}
 });
-function showPublic(){publicSite.classList.remove("hidden");publicFooter.classList.remove("hidden");appShell.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.remove("hidden")}
-function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");appShell.classList.remove("hidden");$("sidebarBusinessName").textContent=business.name;$("sidebarUserEmail").textContent=currentUser.email||"";$("settingsBusinessName").value=business.name||"";$("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";$("settingsPhone").value=business.phone||"";$("settingsWebsite").value=business.website||"";renderModuleOptions();renderEverything();switchView("dashboard")}
+function showPublic(){publicSite.classList.remove("hidden");publicFooter.classList.remove("hidden");appShell.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.remove("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public")}
+function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public");appShell.classList.remove("hidden");$("sidebarBusinessName").textContent=business.name;$("sidebarUserEmail").textContent=currentUser.email||"";$("settingsBusinessName").value=business.name||"";$("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";$("settingsPhone").value=business.phone||"";$("settingsWebsite").value=business.website||"";renderModuleOptions();renderEverything();switchView("dashboard")}
 
 
 const ownerViews={
   overview:$("ownerOverviewView"),
+  platform:$("ownerPlatformView"),
+  subscriptions:$("ownerSubscriptionsView"),
   businesses:$("ownerBusinessesView"),
   tools:$("ownerToolsView"),
   attention:$("ownerAttentionView")
@@ -549,6 +551,58 @@ function switchOwnerView(name){
 }
 document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerView(btn.dataset.ownerView)));
 document.querySelectorAll("[data-owner-jump]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerView(btn.dataset.ownerJump)));
+
+
+let ownerPreviewReturnView="platform";
+function ownerPreviewLabel(target){
+  const labels={
+    top:"Homepage",
+    features:"Features",
+    "business-types":"Business Examples",
+    "how-it-works":"How It Works",
+    pricing:"Pricing / Subscription",
+    login:"Login",
+    signup:"Create Account"
+  };
+  return labels[target]||"Public Website";
+}
+function openOwnerPublicPreview(target="top",authMode=null){
+  ownerPreviewReturnView=document.querySelector("[data-owner-view].active")?.dataset.ownerView||"platform";
+  ownerShell.classList.add("hidden");
+  appShell.classList.add("hidden");
+  publicSite.classList.remove("hidden");
+  publicFooter.classList.remove("hidden");
+  document.querySelector(".site-header").classList.remove("hidden");
+  $("ownerPublicPreviewBar").classList.remove("hidden");
+  $("ownerPublicPreviewLabel").textContent=`Viewing: ${ownerPreviewLabel(authMode||target)}`;
+  document.body.classList.add("owner-previewing-public");
+
+  if(authMode){
+    switchAuthTab(authMode);
+    authModal.classList.remove("hidden");
+    window.scrollTo({top:0,behavior:"smooth"});
+    return;
+  }
+
+  authModal.classList.add("hidden");
+  const el=target==="top"?$("top"):$(target);
+  if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),20);
+}
+function returnToOwnerConsole(){
+  authModal.classList.add("hidden");
+  publicSite.classList.add("hidden");
+  publicFooter.classList.add("hidden");
+  document.querySelector(".site-header").classList.add("hidden");
+  appShell.classList.add("hidden");
+  ownerShell.classList.remove("hidden");
+  $("ownerPublicPreviewBar").classList.add("hidden");
+  document.body.classList.remove("owner-previewing-public");
+  switchOwnerView(ownerPreviewReturnView||"platform");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("returnToOwnerBtn").addEventListener("click",returnToOwnerConsole);
+document.querySelectorAll("[data-owner-public-preview]").forEach(btn=>btn.addEventListener("click",()=>openOwnerPublicPreview(btn.dataset.ownerPublicPreview)));
+document.querySelectorAll("[data-owner-auth-preview]").forEach(btn=>btn.addEventListener("click",()=>openOwnerPublicPreview("top",btn.dataset.ownerAuthPreview)));
 
 function ownerMonthKey(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}`;
@@ -572,6 +626,69 @@ function businessAttentionReasons(b){
   if(!b.phone&&!b.website)reasons.push({text:"Limited contact info",tone:"warn"});
   return reasons;
 }
+
+function renderOwnerSubscriptions(){
+  if(!$("ownerSubActive"))return;
+  const active=ownerBusinesses.filter(b=>b.subscriptionStatus==="active").length;
+  const setup=ownerBusinesses.filter(b=>(b.subscriptionStatus||"setup_required")==="setup_required").length;
+  const pastDue=ownerBusinesses.filter(b=>b.subscriptionStatus==="past_due").length;
+  const canceled=ownerBusinesses.filter(b=>b.subscriptionStatus==="canceled").length;
+  const mrr=active*.99;
+
+  $("ownerSubActive").textContent=active;
+  $("ownerSubSetup").textContent=setup;
+  $("ownerSubPastDue").textContent=pastDue;
+  $("ownerSubCanceled").textContent=canceled;
+  $("ownerSubMrr").textContent=`$${mrr.toFixed(2)}`;
+  $("ownerSubAnnual").textContent=`$${(mrr*12).toFixed(2)}`;
+
+  const filter=$("ownerSubscriptionPageFilter")?.value||"all";
+  const filtered=ownerBusinesses.filter(b=>{
+    const status=b.subscriptionStatus||"setup_required";
+    return filter==="all"||status===filter;
+  });
+  $("ownerSubscriptionAccountCount").textContent=`${filtered.length} business${filtered.length===1?"":"es"}`;
+  $("ownerSubscriptionBusinessList").innerHTML=filtered.length?filtered.map(b=>{
+    const status=b.subscriptionStatus||"setup_required";
+    const access=b.platformStatus||"active";
+    return `<div class="owner-business-row detailed">
+      <div class="owner-business-main">
+        <strong>${safeText(b.name||"Unnamed Business")}</strong>
+        <span>${safeText(b.ownerName||"No owner name")}</span>
+        <div class="owner-business-contact">
+          ${b.phone?`<span>${safeText(b.phone)}</span>`:""}
+          ${b.website?`<span>${safeText(b.website)}</span>`:""}
+        </div>
+      </div>
+      <div class="owner-business-meta">
+        <strong>Subscription</strong>
+        <span class="owner-status ${ownerStatusClass(status)}">${safeText(status.replaceAll("_"," "))}</span>
+        <span>Plan: ${safeText(b.plan||"starter")}</span>
+      </div>
+      <div class="owner-business-meta">
+        <strong>Platform Access</strong>
+        <span class="owner-status ${ownerStatusClass(access)}">${safeText(access)}</span>
+        <span>Joined ${safeText(formatOwnerDate(b.createdAt))}</span>
+      </div>
+      <div class="owner-actions">
+        <button class="mini-btn" data-owner-sub-view="${b.id}">View Details</button>
+        <select class="input" data-owner-sub-page-status="${b.id}">
+          ${["setup_required","active","past_due","canceled"].map(v=>`<option value="${v}" ${v===status?"selected":""}>${v.replaceAll("_"," ")}</option>`).join("")}
+        </select>
+      </div>
+    </div>`;
+  }).join(""):'<div class="empty-state">No businesses match this subscription filter.</div>';
+
+  document.querySelectorAll("[data-owner-sub-view]").forEach(btn=>btn.onclick=()=>openOwnerBusinessDetails(btn.dataset.ownerSubView));
+  document.querySelectorAll("[data-owner-sub-page-status]").forEach(select=>select.onchange=async()=>{
+    const id=select.dataset.ownerSubPageStatus;
+    await updateDoc(doc(db,"businesses",id),{subscriptionStatus:select.value,updatedAt:serverTimestamp()});
+    const found=ownerBusinesses.find(b=>b.id===id);
+    if(found)found.subscriptionStatus=select.value;
+    renderOwnerDashboard();
+  });
+}
+
 function renderOwnerGrowthChart(){
   if(!$("ownerGrowthChart"))return;
   const now=new Date();
@@ -656,7 +773,7 @@ async function loadOwnerBusinesses(){
   });
 }
 function showOwnerApp(){
-  publicSite.classList.add("hidden");publicFooter.classList.add("hidden");appShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");ownerShell.classList.remove("hidden");
+  publicSite.classList.add("hidden");publicFooter.classList.add("hidden");appShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public");ownerShell.classList.remove("hidden");
   $("ownerDisplayName").textContent=currentPlatformAdmin.displayName||currentUser.displayName||"Silverforge Owner";
   $("ownerEmail").textContent=currentUser.email||currentPlatformAdmin.email||"";
   renderOwnerDashboard();
@@ -714,6 +831,7 @@ function renderOwnerDashboard(){
 
   $("ownerRevenueCurrent").textContent=`$${mrr.toFixed(2)}`;
   renderOwnerGrowthChart();
+  renderOwnerSubscriptions();
   renderOwnerTopTools();
   renderOwnerNewestBusinesses();
   renderOwnerAttention();
@@ -1042,6 +1160,7 @@ $("ownerAccessFilter").addEventListener("change",renderOwnerBusinesses);
 $("ownerOverviewBusinessSearch").addEventListener("input",renderOwnerBusinesses);
 $("ownerOverviewSubscriptionFilter").addEventListener("change",renderOwnerBusinesses);
 $("ownerOverviewAccessFilter").addEventListener("change",renderOwnerBusinesses);
+$("ownerSubscriptionPageFilter").addEventListener("change",renderOwnerSubscriptions);
 $("ownerRefreshBtn").addEventListener("click",async()=>{
   $("ownerRefreshBtn").disabled=true;
   $("ownerRefreshBtn").textContent="Refreshing...";
