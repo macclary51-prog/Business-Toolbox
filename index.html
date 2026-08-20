@@ -236,6 +236,8 @@
       <div class="business-block"><small>PLATFORM OWNER</small><strong id="ownerDisplayName">Silverforge Owner</strong><span id="ownerEmail"></span></div>
       <nav class="sidebar-nav">
         <button class="side-link active" data-owner-view="overview"><span>⌂</span> Platform Overview</button>
+        <button class="side-link" data-owner-view="platform"><span>◉</span> Platform View</button>
+        <button class="side-link" data-owner-view="subscriptions"><span>$</span> Subscriptions</button>
         <button class="side-link" data-owner-view="businesses"><span>▦</span> Businesses</button>
         <button class="side-link" data-owner-view="tools"><span>◇</span> Tool Usage</button>
         <button class="side-link" data-owner-view="attention"><span>!</span> Needs Attention</button>
@@ -362,6 +364,192 @@
               </div>
               <p class="panel-copy">The complete customer-management list is back on your main Owner Overview. You can still use the dedicated Businesses page too.</p>
               <div class="owner-business-list" id="ownerOverviewBusinessList"></div>
+            </article>
+          </section>
+
+          <section class="owner-console-view hidden" id="ownerPlatformView">
+            <div class="owner-overview-heading">
+              <div>
+                <span class="eyebrow">SEE THE WHOLE PRODUCT</span>
+                <h1>Platform View</h1>
+                <p>Open any part of the public website or inspect the customer experience without logging out of the Owner Console.</p>
+              </div>
+            </div>
+
+            <article class="panel owner-platform-section">
+              <div class="panel-heading">
+                <div>
+                  <small>PUBLIC WEBSITE</small>
+                  <h3>What Visitors See</h3>
+                </div>
+              </div>
+              <div class="owner-page-grid">
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">⌂</span>
+                  <small>PUBLIC PAGE</small>
+                  <h4>Homepage</h4>
+                  <p>Hero, product message, dashboard preview and main calls to action.</p>
+                  <button class="mini-btn record-action-primary" data-owner-public-preview="top">Preview Homepage</button>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">◇</span>
+                  <small>PUBLIC PAGE</small>
+                  <h4>Features</h4>
+                  <p>Searchable Business Toolbox module catalog and tool details.</p>
+                  <button class="mini-btn record-action-primary" data-owner-public-preview="features">Preview Features</button>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">▦</span>
+                  <small>PUBLIC PAGE</small>
+                  <h4>Business Examples</h4>
+                  <p>Suggested tool combinations for different kinds of businesses.</p>
+                  <button class="mini-btn record-action-primary" data-owner-public-preview="business-types">Preview Examples</button>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">1→3</span>
+                  <small>PUBLIC PAGE</small>
+                  <h4>How It Works</h4>
+                  <p>Account creation, choosing modules and running the business.</p>
+                  <button class="mini-btn record-action-primary" data-owner-public-preview="how-it-works">Preview Process</button>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">$</span>
+                  <small>PUBLIC PAGE</small>
+                  <h4>Pricing / Subscription</h4>
+                  <p>The customer-facing $0.99/month Business Toolbox offer.</p>
+                  <button class="mini-btn record-action-primary" data-owner-public-preview="pricing">Preview Pricing</button>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">↪</span>
+                  <small>ACCOUNT ACCESS</small>
+                  <h4>Login</h4>
+                  <p>See the login screen exactly as a returning customer sees it.</p>
+                  <button class="mini-btn" data-owner-auth-preview="login">Preview Login</button>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">+</span>
+                  <small>ACCOUNT ACCESS</small>
+                  <h4>Create Account</h4>
+                  <p>See the customer business signup form and required fields.</p>
+                  <button class="mini-btn" data-owner-auth-preview="signup">Preview Signup</button>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel owner-platform-section">
+              <div class="panel-heading">
+                <div>
+                  <small>CUSTOMER PRODUCT</small>
+                  <h3>Customer Workspace Map</h3>
+                </div>
+              </div>
+              <p class="panel-copy">These are the areas every customer business can use after signing in.</p>
+              <div class="owner-page-grid customer-page-map">
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">⌂</span><small>CUSTOMER</small><h4>Dashboard</h4>
+                  <p>Business snapshot, open records, due-soon work, active tools and recent activity.</p>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">◫</span><small>CUSTOMER</small><h4>Monthly Overview</h4>
+                  <p>Month history, comparisons, costs, trends, KPIs, due work and monthly records.</p>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">▦</span><small>CUSTOMER</small><h4>Tools</h4>
+                  <p>Enable and disable Business Toolbox modules without deleting saved records.</p>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">☰</span><small>CUSTOMER</small><h4>All Records</h4>
+                  <p>Search, status filter, due-date filter, tool filter, CSV export and smart tool actions.</p>
+                </article>
+                <article class="owner-page-card">
+                  <span class="owner-page-icon">⚙</span><small>CUSTOMER</small><h4>Settings</h4>
+                  <p>Business name, owner name, phone and business website settings.</p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel owner-platform-section">
+              <div class="panel-heading">
+                <div><small>PLATFORM STATUS</small><h3>Feature Checklist</h3></div>
+              </div>
+              <div class="owner-platform-checklist">
+                <div><strong>Public Homepage</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Feature Catalog</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Customer Authentication</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Customer Dashboard</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Monthly Overview</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Smart Business Tools</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Owner Console</strong><span class="owner-status active">Available</span></div>
+                <div><strong>Live Payment Checkout</strong><span class="owner-status setup_required">Not Connected Yet</span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="owner-console-view hidden" id="ownerSubscriptionsView">
+            <div class="owner-overview-heading">
+              <div>
+                <span class="eyebrow">CUSTOMER BILLING</span>
+                <h1>Subscriptions</h1>
+                <p>See the public plan, current subscription states, recurring revenue estimates and which accounts need billing attention.</p>
+              </div>
+              <button class="btn btn-secondary" data-owner-public-preview="pricing">Preview Public Pricing</button>
+            </div>
+
+            <div class="stats-grid owner-stats">
+              <article class="stat-card"><span>Active</span><strong id="ownerSubActive">0</strong><small>Current active subscription records</small></article>
+              <article class="stat-card"><span>Setup Required</span><strong id="ownerSubSetup">0</strong><small>Accounts not activated yet</small></article>
+              <article class="stat-card"><span>Past Due</span><strong id="ownerSubPastDue">0</strong><small>Billing follow-up needed</small></article>
+              <article class="stat-card"><span>Canceled</span><strong id="ownerSubCanceled">0</strong><small>Inactive subscriptions</small></article>
+            </div>
+
+            <div class="owner-subscription-grid">
+              <article class="panel owner-plan-card">
+                <span class="eyebrow">PUBLIC PLAN</span>
+                <h3>Business Toolbox</h3>
+                <div class="owner-plan-price"><strong>$0.99</strong><span>/ month</span></div>
+                <ul>
+                  <li>Business dashboard</li>
+                  <li>Monthly business overview</li>
+                  <li>Tool-specific modules</li>
+                  <li>Smart record actions</li>
+                  <li>CSV export</li>
+                  <li>Mobile-friendly website</li>
+                  <li>Business data separated by account</li>
+                </ul>
+                <button class="btn btn-secondary full" data-owner-public-preview="pricing">See Customer Pricing Page</button>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading"><div><small>REVENUE</small><h3>Subscription Revenue</h3></div></div>
+                <div class="owner-revenue-goals owner-sub-revenue">
+                  <div><span>Estimated MRR</span><strong id="ownerSubMrr">$0.00</strong></div>
+                  <div><span>Annual Projection</span><strong id="ownerSubAnnual">$0.00</strong></div>
+                  <div><span>100 Active Businesses</span><strong>$99.00/mo</strong></div>
+                  <div><span>1,000 Active Businesses</span><strong>$990.00/mo</strong></div>
+                </div>
+                <div class="owner-payment-status">
+                  <div><strong>Payment Checkout</strong><span class="owner-status setup_required">Not Connected</span></div>
+                  <p>The website currently tracks subscription status in Firestore. A live payment processor still needs to be connected before customer billing can be automatic.</p>
+                </div>
+              </article>
+            </div>
+
+            <article class="panel owner-restored-panel">
+              <div class="panel-heading owner-panel-heading">
+                <div>
+                  <small>SUBSCRIPTION ACCOUNTS</small>
+                  <h3>Customer Subscription Status</h3>
+                  <p class="owner-result-count" id="ownerSubscriptionAccountCount">0 businesses</p>
+                </div>
+                <select class="input" id="ownerSubscriptionPageFilter">
+                  <option value="all">All subscriptions</option>
+                  <option value="active">Active</option>
+                  <option value="setup_required">Setup required</option>
+                  <option value="past_due">Past due</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+              </div>
+              <div class="owner-business-list" id="ownerSubscriptionBusinessList"></div>
             </article>
           </section>
 
@@ -647,5 +835,14 @@
 
   <footer class="site-footer" id="publicFooter"><div class="container footer-wrap"><div><strong>Silverforge Business Toolbox</strong><p>Simple tools for small businesses.</p></div><span>© <span id="year"></span> Silverforge Digital Solutions</span></div></footer>
   <script type="module" src="app.js"></script>
+
+  <div class="owner-public-preview-bar hidden" id="ownerPublicPreviewBar">
+    <div>
+      <strong>Owner Preview Mode</strong>
+      <span id="ownerPublicPreviewLabel">Viewing public website</span>
+    </div>
+    <button class="btn btn-primary" id="returnToOwnerBtn" type="button">Return to Owner Console</button>
+  </div>
+
 </body>
 </html>
