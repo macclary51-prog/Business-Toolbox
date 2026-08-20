@@ -888,28 +888,169 @@ function isCompletedLike(status=""){return ["complete","completed","resolved","a
 function selectedMonthKey(){return $("monthlyPicker")?.value||monthKeyFromDate(new Date());}
 function setMonthKey(key){if($("monthlyPicker"))$("monthlyPicker").value=key;renderMonthlyOverview();}
 function shiftMonth(delta){const [y,m]=selectedMonthKey().split("-").map(Number);setMonthKey(monthKeyFromDate(new Date(y,m-1+delta,1)));}
+function numberField(record,key){
+  const raw=record?.fields?.[key];
+  const n=Number(raw);
+  return Number.isFinite(n)?n:0;
+}
+function recordDueDate(record){
+  if(!record?.dueDate)return null;
+  const d=new Date(`${record.dueDate}T23:59:59`);
+  return Number.isNaN(d.getTime())?null:d;
+}
+function recordsForMonth(key){
+  return records.filter(r=>{
+    const d=recordDateForMonthly(r);
+    return d&&monthKeyFromDate(d)===key;
+  });
+}
+function previousMonthKey(key){
+  const [year,month]=key.split("-").map(Number);
+  return monthKeyFromDate(new Date(year,month-2,1));
+}
+function compareText(current,previous,label){
+  const diff=current-previous;
+  if(diff===0)return `Same as previous month`;
+  return `${diff>0?"+":""}${diff} vs previous month`;
+}
+function renderDashboardMonthSnapshot(){
+  if(!$("dashMonthCreated"))return;
+  const now=new Date();
+  const key=monthKeyFromDate(now);
+  const monthRecords=recordsForMonth(key);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const soon=new Date(today); soon.setDate(today.getDate()+7);
+  const overdue=records.filter(r=>{
+    const d=recordDueDate(r);
+    return d&&d<today&&!isCompletedLike(r.status);
+  }).length;
+  const dueSoon=records.filter(r=>{
+    const d=recordDueDate(r);
+    return d&&d>=today&&d<=soon&&!isCompletedLike(r.status);
+  }).length;
+  $("dashMonthCreated").textContent=monthRecords.length;
+  $("dashMonthCompleted").textContent=monthRecords.filter(r=>isCompletedLike(r.status)).length;
+  $("dashMonthOverdue").textContent=overdue;
+  $("dashMonthDueSoon").textContent=dueSoon;
+}
 function renderMonthlyOverview(){
   if(!$("monthlyPicker"))return;
   const key=selectedMonthKey();
-  const monthRecords=records.filter(r=>{const d=recordDateForMonthly(r);return d&&monthKeyFromDate(d)===key;});
+  const prevKey=previousMonthKey(key);
+  const monthRecords=recordsForMonth(key);
+  const prevRecords=recordsForMonth(prevKey);
+
   const completed=monthRecords.filter(r=>isCompletedLike(r.status)).length;
+  const prevCompleted=prevRecords.filter(r=>isCompletedLike(r.status)).length;
+  const open=monthRecords.length-completed;
+  const prevOpen=prevRecords.length-prevCompleted;
   const toolsUsed=[...new Set(monthRecords.map(r=>r.module).filter(Boolean))];
+  const prevTools=[...new Set(prevRecords.map(r=>r.module).filter(Boolean))];
+
   $("monthlyStatCreated").textContent=monthRecords.length;
   $("monthlyStatCompleted").textContent=completed;
-  $("monthlyStatOpen").textContent=monthRecords.length-completed;
+  $("monthlyStatOpen").textContent=open;
   $("monthlyStatTools").textContent=toolsUsed.length;
+  $("monthlyCreatedCompare").textContent=compareText(monthRecords.length,prevRecords.length);
+  $("monthlyCompletedCompare").textContent=compareText(completed,prevCompleted);
+  $("monthlyOpenCompare").textContent=compareText(open,prevOpen);
+  $("monthlyToolsCompare").textContent=compareText(toolsUsed.length,prevTools.length);
   $("monthlyRecordTitle").textContent=`${monthLabel(key)} Records`;
-  const byTool=toolsUsed.map(id=>({tool:toolById(id),count:monthRecords.filter(r=>r.module===id).length})).sort((a,b)=>b.count-a.count);
-  $("monthlyToolActivity").innerHTML=byTool.length?byTool.map(({tool,count})=>`<div class="monthly-tool-row"><div><strong>${safeText(tool.icon)} ${safeText(tool.name)}</strong><span>${safeText(tool.category)}</span></div><span class="monthly-tool-count">${count}</span></div>`).join(""):'<div class="empty-state">No tool activity in this month.</div>';
-  const counts={}; monthRecords.forEach(r=>{const s=r.status||"Open";counts[s]=(counts[s]||0)+1;});
-  const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  $("monthlyStatusBreakdown").innerHTML=rows.length?rows.map(([status,count])=>`<div class="monthly-status-row"><div><strong>${safeText(status)}</strong><span>${isCompletedLike(status)?"Completed / resolved":"Open / in progress"}</span></div><span class="monthly-status-count">${count}</span></div>`).join(""):'<div class="empty-state">No statuses to show for this month.</div>';
-  $("monthlyRecords").innerHTML=monthRecords.length?monthRecords.slice().sort((a,b)=>(recordDateForMonthly(b)?.getTime()||0)-(recordDateForMonthly(a)?.getTime()||0)).map(recordHtml).join(""):`<div class="empty-state">No records were created in ${safeText(monthLabel(key))}.</div>`;
+
+  // Costs tracked from modules that currently have cost fields.
+  const maintenanceCost=monthRecords.filter(r=>r.module==="maintenance")
+    .reduce((sum,r)=>sum+numberField(r,"cost"),0);
+  const subscriptionCost=monthRecords.filter(r=>r.module==="subscriptions")
+    .reduce((sum,r)=>sum+numberField(r,"cost"),0);
+  $("monthlyMaintenanceCost").textContent=`$${maintenanceCost.toFixed(2)}`;
+  $("monthlySubscriptionCost").textContent=`$${subscriptionCost.toFixed(2)}`;
+  $("monthlyTrackedCost").textContent=`$${(maintenanceCost+subscriptionCost).toFixed(2)}`;
+
+  // Attention items (all current records, not just created this month).
+  const [year,month]=key.split("-").map(Number);
+  const monthStart=new Date(year,month-1,1);
+  const monthEnd=new Date(year,month,0,23,59,59);
+  const attention=records.filter(r=>{
+    const d=recordDueDate(r);
+    return d&&!isCompletedLike(r.status)&&d<=monthEnd;
+  }).sort((a,b)=>(recordDueDate(a)?.getTime()||0)-(recordDueDate(b)?.getTime()||0)).slice(0,8);
+
+  $("monthlyAttentionList").innerHTML=attention.length?attention.map(r=>{
+    const d=recordDueDate(r);
+    const overdue=d<monthStart;
+    const t=toolById(r.module);
+    return `<div class="monthly-attention-item">
+      <div><strong>${safeText(r.title||"Untitled")}</strong><span>${safeText(t.name)} • Due ${safeText(r.dueDate||"")}</span></div>
+      <span class="monthly-attention-badge ${overdue?"overdue":"soon"}">${overdue?"Overdue":"Due this month"}</span>
+    </div>`;
+  }).join(""):'<div class="empty-state">Nothing overdue or due during this month.</div>';
+
+  // Tool-specific KPIs.
+  const kpis=[
+    ["Tasks Completed",monthRecords.filter(r=>r.module==="tasks"&&isCompletedLike(r.status)).length,"Completed task records"],
+    ["Incidents",monthRecords.filter(r=>r.module==="incidents").length,"Incidents recorded"],
+    ["Maintenance",monthRecords.filter(r=>r.module==="maintenance").length,"Service records"],
+    ["Training Completed",monthRecords.filter(r=>r.module==="training"&&isCompletedLike(r.status)).length,"Training items completed"],
+    ["Complaints",monthRecords.filter(r=>r.module==="complaints").length,"Customer complaints logged"],
+    ["Complaints Resolved",monthRecords.filter(r=>r.module==="complaints"&&isCompletedLike(r.status)).length,"Complaints resolved"],
+    ["Low / Out Supplies",monthRecords.filter(r=>r.module==="supplies"&&["low stock","out of stock"].includes(String(r.status||"").toLowerCase())).length,"Supply alerts"],
+    ["Visitors",monthRecords.filter(r=>r.module==="visitor-log").length,"Visitor log entries"],
+    ["Packages",monthRecords.filter(r=>r.module==="package-log").length,"Package records"],
+    ["Renewals",monthRecords.filter(r=>r.module==="renewals").length,"Renewal records created"],
+    ["Photo Proof",monthRecords.filter(r=>r.module==="photo-proof").length,"Proof records captured"],
+    ["Shift Handoffs",monthRecords.filter(r=>r.module==="shift-handoff").length,"Handoff records"]
+  ];
+  $("monthlyKpiGrid").innerHTML=kpis.map(([label,value,sub])=>`
+    <div class="monthly-kpi-card"><span>${safeText(label)}</span><strong>${value}</strong><small>${safeText(sub)}</small></div>
+  `).join("");
+
+  // 6-month trend.
+  const trend=[];
+  const [cy,cm]=key.split("-").map(Number);
+  for(let offset=5;offset>=0;offset--){
+    const d=new Date(cy,cm-1-offset,1);
+    const k=monthKeyFromDate(d);
+    trend.push({key:k,label:d.toLocaleDateString(undefined,{month:"short"}),count:recordsForMonth(k).length});
+  }
+  const max=Math.max(1,...trend.map(x=>x.count));
+  $("monthlyTrendChart").innerHTML=trend.map(x=>{
+    const h=Math.max(4,Math.round((x.count/max)*120));
+    return `<div class="monthly-trend-column">
+      <div class="monthly-trend-bar-wrap"><div class="monthly-trend-bar" style="height:${h}px" title="${safeText(x.label)}: ${x.count} records"></div></div>
+      <strong>${x.count}</strong><span>${safeText(x.label)}</span>
+    </div>`;
+  }).join("");
+
+  const byTool=toolsUsed.map(id=>({
+    tool:toolById(id),
+    count:monthRecords.filter(r=>r.module===id).length
+  })).sort((a,b)=>b.count-a.count);
+  $("monthlyToolActivity").innerHTML=byTool.length?byTool.map(({tool,count})=>`
+    <div class="monthly-tool-row">
+      <div><strong>${safeText(tool.icon)} ${safeText(tool.name)}</strong><span>${safeText(tool.category)}</span></div>
+      <span class="monthly-tool-count">${count}</span>
+    </div>`).join(""):'<div class="empty-state">No tool activity in this month.</div>';
+
+  const counts={};
+  monthRecords.forEach(r=>{const s=r.status||"Open";counts[s]=(counts[s]||0)+1});
+  const statusRows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  $("monthlyStatusBreakdown").innerHTML=statusRows.length?statusRows.map(([status,count])=>`
+    <div class="monthly-status-row">
+      <div><strong>${safeText(status)}</strong><span>${isCompletedLike(status)?"Completed / resolved":"Open / in progress"}</span></div>
+      <span class="monthly-status-count">${count}</span>
+    </div>`).join(""):'<div class="empty-state">No statuses to show for this month.</div>';
+
+  $("monthlyRecords").innerHTML=monthRecords.length?monthRecords.slice().sort((a,b)=>{
+    const ad=recordDateForMonthly(a)?.getTime()||0;
+    const bd=recordDateForMonthly(b)?.getTime()||0;
+    return bd-ad;
+  }).map(recordHtml).join(""):`<div class="empty-state">No records were created in ${safeText(monthLabel(key))}.</div>`;
   bindRecordActions();
+  renderDashboardMonthSnapshot();
 }
 
 function enabledModules(){return Array.isArray(business.enabledModules)?business.enabledModules:defaultEnabledModules}
-function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview()}
+function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot()}
 function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!["Complete","Archived"].includes(r.status)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||["Complete","Archived"].includes(r.status))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
 function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,12).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{switchView("records");$("recordModuleFilter").value=btn.dataset.toolOpen;renderRecords();});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
