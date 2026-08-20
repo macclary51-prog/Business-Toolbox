@@ -710,21 +710,16 @@ function renderOwnerDashboard(){
   renderOwnerTools();
   renderOwnerBusinesses();
 }
-function renderOwnerTools(){
-  const q=($("ownerToolSearch")?.value||"").trim().toLowerCase();
+
+function ownerToolCardsHtml(searchValue=""){
+  const q=(searchValue||"").trim().toLowerCase();
   const filtered=toolDefinitions.filter(t=>{
     const text=`${t.name||""} ${t.category||""} ${t.desc||""}`.toLowerCase();
-    return !q || text.includes(q);
+    return !q||text.includes(q);
   });
-
-  if($("ownerToolSummary")){
-    $("ownerToolSummary").textContent=`${filtered.length} tool${filtered.length===1?"":"s"} shown`;
-  }
-  if(!$("ownerToolsGrid"))return;
-
-  $("ownerToolsGrid").innerHTML=filtered.map(t=>{
+  const html=filtered.map(t=>{
     const enabledCount=ownerBusinesses.filter(b=>Array.isArray(b.enabledModules)&&b.enabledModules.includes(t.id)).length;
-    const percent=ownerBusinesses.length ? Math.round((enabledCount/ownerBusinesses.length)*100) : 0;
+    const percent=ownerBusinesses.length?Math.round((enabledCount/ownerBusinesses.length)*100):0;
     return `<article class="owner-tool-card" data-owner-tool-preview="${t.id}" tabindex="0" role="button" aria-label="Preview ${safeText(t.name)} form">
       <div class="owner-tool-card-top">
         <span class="owner-tool-card-icon">${safeText(t.icon)}</span>
@@ -738,9 +733,13 @@ function renderOwnerTools(){
       </div>
       <div class="owner-tool-open-hint">Open form preview →</div>
     </article>`;
-  }).join("") || '<div class="empty-state">No tools match your search.</div>';
-
+  }).join("")||'<div class="empty-state">No tools match your search.</div>';
+  return {filtered,html};
+}
+function bindOwnerToolPreviewCards(){
   document.querySelectorAll("[data-owner-tool-preview]").forEach(card=>{
+    if(card.dataset.previewBound==="true")return;
+    card.dataset.previewBound="true";
     const open=()=>openOwnerToolPreview(card.dataset.ownerToolPreview);
     card.addEventListener("click",open);
     card.addEventListener("keydown",e=>{
@@ -751,7 +750,17 @@ function renderOwnerTools(){
     });
   });
 }
+function renderOwnerTools(){
+  const page=ownerToolCardsHtml($("ownerToolSearch")?.value||"");
+  if($("ownerToolSummary"))$("ownerToolSummary").textContent=`${page.filtered.length} tool${page.filtered.length===1?"":"s"} shown`;
+  if($("ownerToolsGrid"))$("ownerToolsGrid").innerHTML=page.html;
 
+  const overview=ownerToolCardsHtml($("ownerOverviewToolSearch")?.value||"");
+  if($("ownerOverviewToolSummary"))$("ownerOverviewToolSummary").textContent=`${overview.filtered.length} tool${overview.filtered.length===1?"":"s"} shown`;
+  if($("ownerOverviewToolsGrid"))$("ownerOverviewToolsGrid").innerHTML=overview.html;
+
+  bindOwnerToolPreviewCards();
+}
 
 function ownerPreviewFieldHtml(field){
   const required=field.required?" • Required":" • Optional";
@@ -820,11 +829,9 @@ $("ownerToolPreviewModal").addEventListener("click",e=>{
 });
 
 function ownerStatusClass(value=""){return String(value).toLowerCase().replaceAll(" ","_")}
-function renderOwnerBusinesses(){
-  const q=($("ownerBusinessSearch").value||"").trim().toLowerCase();
-  const subscriptionFilter=$("ownerSubscriptionFilter")?.value||"all";
-  const accessFilter=$("ownerAccessFilter")?.value||"all";
 
+function ownerBusinessRowsHtml(searchValue="",subscriptionFilter="all",accessFilter="all"){
+  const q=(searchValue||"").trim().toLowerCase();
   const filtered=ownerBusinesses.filter(b=>{
     const text=`${b.name||""} ${b.ownerName||""} ${b.website||""} ${b.phone||""} ${b.subscriptionStatus||""} ${b.id||""}`.toLowerCase();
     const subscription=b.subscriptionStatus||"setup_required";
@@ -834,8 +841,7 @@ function renderOwnerBusinesses(){
       && (accessFilter==="all"||access===accessFilter);
   });
 
-  $("ownerResultCount").textContent=`${filtered.length} business${filtered.length===1?"":"es"}`;
-  $("ownerBusinessList").innerHTML=filtered.length?filtered.map(b=>{
+  const html=filtered.length?filtered.map(b=>{
     const subscription=b.subscriptionStatus||"setup_required";
     const access=b.platformStatus||"active";
     const tools=Array.isArray(b.enabledModules)?b.enabledModules.length:0;
@@ -874,21 +880,59 @@ function renderOwnerBusinesses(){
     </div>`;
   }).join(""):'<div class="empty-state">No business accounts match the current filters.</div>';
 
-  document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.onclick=()=>openOwnerBusinessDetails(btn.dataset.ownerView));
-  document.querySelectorAll("[data-owner-subscription]").forEach(select=>select.onchange=async()=>{
-    const id=select.dataset.ownerSubscription;
-    await updateDoc(doc(db,"businesses",id),{subscriptionStatus:select.value,updatedAt:serverTimestamp()});
-    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.subscriptionStatus=select.value;
-    renderOwnerDashboard();
+  return {filtered,html};
+}
+function bindOwnerBusinessActions(){
+  document.querySelectorAll("[data-owner-view]").forEach(btn=>{
+    if(btn.dataset.businessViewBound==="true")return;
+    btn.dataset.businessViewBound="true";
+    btn.onclick=()=>openOwnerBusinessDetails(btn.dataset.ownerView);
   });
-  document.querySelectorAll("[data-owner-access]").forEach(btn=>btn.onclick=async()=>{
-    const id=btn.dataset.ownerAccess,next=btn.dataset.nextAccess;
-    const label=next==="suspended"?"Suspend this business's platform access?":"Restore this business's platform access?";
-    if(!confirm(label))return;
-    await updateDoc(doc(db,"businesses",id),{platformStatus:next,updatedAt:serverTimestamp()});
-    const found=ownerBusinesses.find(b=>b.id===id);if(found)found.platformStatus=next;
-    renderOwnerDashboard();
+
+  document.querySelectorAll("[data-owner-subscription]").forEach(select=>{
+    if(select.dataset.subscriptionBound==="true")return;
+    select.dataset.subscriptionBound="true";
+    select.onchange=async()=>{
+      const id=select.dataset.ownerSubscription;
+      await updateDoc(doc(db,"businesses",id),{subscriptionStatus:select.value,updatedAt:serverTimestamp()});
+      const found=ownerBusinesses.find(b=>b.id===id);
+      if(found)found.subscriptionStatus=select.value;
+      renderOwnerDashboard();
+    };
   });
+
+  document.querySelectorAll("[data-owner-access]").forEach(btn=>{
+    if(btn.dataset.accessBound==="true")return;
+    btn.dataset.accessBound="true";
+    btn.onclick=async()=>{
+      const id=btn.dataset.ownerAccess,next=btn.dataset.nextAccess;
+      const label=next==="suspended"?"Suspend this business's platform access?":"Restore this business's platform access?";
+      if(!confirm(label))return;
+      await updateDoc(doc(db,"businesses",id),{platformStatus:next,updatedAt:serverTimestamp()});
+      const found=ownerBusinesses.find(b=>b.id===id);
+      if(found)found.platformStatus=next;
+      renderOwnerDashboard();
+    };
+  });
+}
+function renderOwnerBusinesses(){
+  const dedicated=ownerBusinessRowsHtml(
+    $("ownerBusinessSearch")?.value||"",
+    $("ownerSubscriptionFilter")?.value||"all",
+    $("ownerAccessFilter")?.value||"all"
+  );
+  if($("ownerResultCount"))$("ownerResultCount").textContent=`${dedicated.filtered.length} business${dedicated.filtered.length===1?"":"es"}`;
+  if($("ownerBusinessList"))$("ownerBusinessList").innerHTML=dedicated.html;
+
+  const overview=ownerBusinessRowsHtml(
+    $("ownerOverviewBusinessSearch")?.value||"",
+    $("ownerOverviewSubscriptionFilter")?.value||"all",
+    $("ownerOverviewAccessFilter")?.value||"all"
+  );
+  if($("ownerOverviewResultCount"))$("ownerOverviewResultCount").textContent=`${overview.filtered.length} business${overview.filtered.length===1?"":"es"}`;
+  if($("ownerOverviewBusinessList"))$("ownerOverviewBusinessList").innerHTML=overview.html;
+
+  bindOwnerBusinessActions();
 }
 
 let ownerDetailBusinessId=null;
@@ -981,9 +1025,13 @@ $("ownerDetailToggleAccess").addEventListener("click",async()=>{
 });
 
 $("ownerToolSearch").addEventListener("input",renderOwnerTools);
+$("ownerOverviewToolSearch").addEventListener("input",renderOwnerTools);
 $("ownerBusinessSearch").addEventListener("input",renderOwnerBusinesses);
 $("ownerSubscriptionFilter").addEventListener("change",renderOwnerBusinesses);
 $("ownerAccessFilter").addEventListener("change",renderOwnerBusinesses);
+$("ownerOverviewBusinessSearch").addEventListener("input",renderOwnerBusinesses);
+$("ownerOverviewSubscriptionFilter").addEventListener("change",renderOwnerBusinesses);
+$("ownerOverviewAccessFilter").addEventListener("change",renderOwnerBusinesses);
 $("ownerRefreshBtn").addEventListener("click",async()=>{
   $("ownerRefreshBtn").disabled=true;
   $("ownerRefreshBtn").textContent="Refreshing...";
