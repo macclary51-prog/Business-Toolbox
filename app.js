@@ -820,7 +820,8 @@ document.querySelectorAll("[data-auth-tab]").forEach(btn=>btn.addEventListener("
 document.querySelectorAll("[data-close-modal]").forEach(btn=>btn.addEventListener("click",()=>authModal.classList.add("hidden")));
 authModal.addEventListener("click",e=>{if(e.target===authModal)authModal.classList.add("hidden")});
 
-let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[],businessEmployees=[],businessOrgUnits=[],businessRoles=[];
+let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[],businessEmployees=[],businessOrgUnits=[],businessRoles=[],businessMembers=[],teamMessages=[],collaborationEvents=[];
+let teamHubTab="work",teamMessageBox="inbox",activeRecordCollaborationId=null;
 
 function isBusinessOwnerAccount(){return userProfile?.role==="owner"}
 function isEmployeeAccount(){return userProfile?.role==="employee"}
@@ -830,6 +831,7 @@ function canEditRecords(){return isBusinessOwnerAccount()||employeePermissions()
 function canDeleteRecords(){return isBusinessOwnerAccount()||employeePermissions().canDeleteRecords===true}
 function canViewMonthly(){return isBusinessOwnerAccount()||employeePermissions().canViewMonthly===true}
 function canExportRecords(){return isBusinessOwnerAccount()||employeePermissions().canExportRecords===true}
+function canAssignRecords(){return isBusinessOwnerAccount()||employeePermissions().canAssignRecords===true||employeePermissions().canEditRecords===true}
 function canManageEmployees(){return isBusinessOwnerAccount()||employeePermissions().canManageEmployees===true}
 function canManageOrganization(){return isBusinessOwnerAccount()||employeePermissions().canManageOrganization===true}
 function canManageTools(){return isBusinessOwnerAccount()||employeePermissions().canManageTools===true}
@@ -858,6 +860,7 @@ function canAccessBusinessView(name){
   if(name==="settings")return canManageSettings();
   if(name==="monthly")return canViewMonthly();
   if(name==="toolWorkspace")return !!activeToolWorkspaceId&&canAccessModule(activeToolWorkspaceId);
+  if(name==="teamHub")return true;
   return ["dashboard","records"].includes(name);
 }
 
@@ -897,9 +900,9 @@ onAuthStateChanged(auth,async user=>{
     const businessSnap=await getDoc(doc(db,"businesses",userProfile.businessId));
     if(!businessSnap.exists())throw new Error("Business record not found or access is suspended.");
     business={id:businessSnap.id,...businessSnap.data()};
-    await Promise.all([loadRecords(),loadBusinessOrgUnits(),loadBusinessRoles()]);
-    if(canManageEmployees()||canManageOrganization())await loadBusinessEmployees();
-    else businessEmployees=[];
+    await Promise.all([loadRecords(),loadBusinessOrgUnits(),loadBusinessRoles(),loadBusinessMembers()]);
+    businessEmployees=businessMembers.filter(member=>member.role==="employee");
+    await Promise.all([loadTeamMessages(),loadCollaborationEvents()]);
     showApp();
   }catch(error){console.error(error);alert("This account could not be loaded. Check account access and Firestore setup.");await signOut(auth);}
 });
@@ -2049,6 +2052,24 @@ $("ownerLogoutBtn").addEventListener("click",()=>signOut(auth));
 
 
 
+async function loadBusinessMembers(){
+  if(!business){businessMembers=[];return;}
+  const snap=await getDocs(query(collection(db,"users"),where("businessId","==",business.id)));
+  businessMembers=snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.role==="owner"||m.active===true).sort((a,b)=>a.role==="owner"?-1:b.role==="owner"?1:(a.displayName||a.email||"").localeCompare(b.displayName||b.email||""));
+}
+function memberById(id){return businessMembers.find(m=>m.id===id)}
+function memberDisplayName(id){return memberById(id)?.displayName||memberById(id)?.email||(id===currentUser?.uid?"You":"Team Member")}
+function groupDisplayName(id){return orgUnitById(id)?.name||"Group"}
+function currentUserOrgIds(){return Array.isArray(userProfile?.orgUnitIds)?userProfile.orgUnitIds:[]}
+function recordAssignedUserIds(r){return Array.isArray(r?.assignedUserIds)?r.assignedUserIds:[]}
+function recordAssignedGroupIds(r){return Array.isArray(r?.assignedOrgUnitIds)?r.assignedOrgUnitIds:[]}
+function isRecordAssignedDirectly(r){return recordAssignedUserIds(r).includes(currentUser?.uid)}
+function isRecordAssignedToMyGroups(r){const mine=new Set(currentUserOrgIds());return recordAssignedGroupIds(r).some(id=>mine.has(id))}
+function recordAssignmentLabels(r){return [...recordAssignedUserIds(r).map(id=>({type:"person",label:memberDisplayName(id)})),...recordAssignedGroupIds(r).map(id=>({type:"group",label:groupDisplayName(id)}))]}
+function collaborationTimestampDate(v){if(!v)return null;if(v instanceof Date)return v;if(typeof v.toDate==="function")return v.toDate();if(typeof v.seconds==="number")return new Date(v.seconds*1000);const d=new Date(v);return Number.isNaN(d.getTime())?null:d}
+function collaborationDateLabel(v){const d=collaborationTimestampDate(v);return d?d.toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"Just now"}
+function currentActorName(){return userProfile?.displayName||currentUser?.displayName||currentUser?.email||"Team Member"}
+
 async function loadBusinessOrgUnits(){
   if(!business){businessOrgUnits=[];return;}
   try{
@@ -2245,6 +2266,7 @@ function openRoleModal(role=null){
   $("roleCanDelete").checked=role?p.canDeleteRecords===true:false;
   $("roleCanMonthly").checked=role?p.canViewMonthly===true:true;
   $("roleCanExport").checked=role?p.canExportRecords===true:false;
+  $("roleCanAssign").checked=role?p.canAssignRecords!==false:true;
   $("roleCanManageEmployees").checked=role?p.canManageEmployees===true:false;
   $("roleCanManageOrganization").checked=role?p.canManageOrganization===true:false;
   $("roleCanManageTools").checked=role?p.canManageTools===true:false;
@@ -2275,7 +2297,7 @@ $("roleForm").addEventListener("submit",async e=>{
   const permissions={
     canCreateRecords:$("roleCanCreate").checked,canEditRecords:$("roleCanEdit").checked,
     canDeleteRecords:$("roleCanDelete").checked,canViewMonthly:$("roleCanMonthly").checked,
-    canExportRecords:$("roleCanExport").checked,canManageEmployees:$("roleCanManageEmployees").checked,
+    canExportRecords:$("roleCanExport").checked,canAssignRecords:$("roleCanAssign").checked,canManageEmployees:$("roleCanManageEmployees").checked,
     canManageOrganization:$("roleCanManageOrganization").checked,canManageTools:$("roleCanManageTools").checked,
     canManageSettings:$("roleCanManageSettings").checked,allowedModules:selectedRoleTools()
   };
@@ -2286,13 +2308,11 @@ $("roleForm").addEventListener("submit",async e=>{
 });
 
 async function loadBusinessEmployees(){
-  if(!(canManageEmployees()||canManageOrganization())||!business){businessEmployees=[];return;}
-  const snap=await getDocs(query(collection(db,"users"),where("businessId","==",business.id)));
-  businessEmployees=snap.docs
-    .map(d=>({id:d.id,...d.data()}))
-    .filter(member=>member.role==="employee")
-    .sort((a,b)=>(a.displayName||a.email||"").localeCompare(b.displayName||b.email||""));
+  if(!business){businessEmployees=[];return;}
+  await loadBusinessMembers();
+  businessEmployees=businessMembers.filter(member=>member.role==="employee");
 }
+
 function employeeAllowedTools(employee){
   const allowed=Array.isArray(employee.permissions?.allowedModules)?employee.permissions.allowedModules:[];
   return fullBusinessEnabledModules().filter(id=>allowed.includes(id));
@@ -2315,6 +2335,7 @@ function employeePermissionLabels(employee){
   if(p.canDeleteRecords)labels.push("Delete");
   if(p.canViewMonthly)labels.push("Monthly");
   if(p.canExportRecords)labels.push("Export");
+  if(p.canAssignRecords)labels.push("Assign Work");
   if(p.canManageEmployees)labels.push("Manage Employees");
   if(p.canManageOrganization)labels.push("Manage Org");
   if(p.canManageTools)labels.push("Manage Tools");
@@ -2400,6 +2421,7 @@ function applyRoleTemplateToEmployee(roleId){
   $("employeeCanDelete").checked=p.canDeleteRecords===true;
   $("employeeCanMonthly").checked=p.canViewMonthly===true;
   $("employeeCanExport").checked=p.canExportRecords===true;
+  $("employeeCanAssign").checked=p.canAssignRecords!==false;
   if(isBusinessOwnerAccount()){
     $("employeeCanManageEmployees").checked=p.canManageEmployees===true;
     $("employeeCanManageOrganization").checked=p.canManageOrganization===true;
@@ -2448,6 +2470,7 @@ function openEmployeeModal(employee=null){
   $("employeeCanDelete").checked=employee?p.canDeleteRecords===true:false;
   $("employeeCanMonthly").checked=employee?p.canViewMonthly===true:true;
   $("employeeCanExport").checked=employee?p.canExportRecords===true:false;
+  $("employeeCanAssign").checked=employee?p.canAssignRecords!==false:true;
   $("employeeCanManageEmployees").checked=employee?p.canManageEmployees===true:false;
   $("employeeCanManageOrganization").checked=employee?p.canManageOrganization===true:false;
   $("employeeCanManageTools").checked=employee?p.canManageTools===true:false;
@@ -2497,6 +2520,7 @@ $("employeeForm").addEventListener("submit",async e=>{
     canDeleteRecords:$("employeeCanDelete").checked,
     canViewMonthly:$("employeeCanMonthly").checked,
     canExportRecords:$("employeeCanExport").checked,
+    canAssignRecords:$("employeeCanAssign").checked,
     canManageEmployees:owner?$("employeeCanManageEmployees").checked:false,
     canManageOrganization:owner?$("employeeCanManageOrganization").checked:false,
     canManageTools:owner?$("employeeCanManageTools").checked:false,
@@ -2542,6 +2566,38 @@ $("employeeForm").addEventListener("submit",async e=>{
     $("employeeMessage").textContent=friendlyAuthError(error.code)||"Could not save employee account.";
   }
 });
+
+async function loadTeamMessages(){
+  if(!business||!currentUser){teamMessages=[];return;}
+  try{const ref=collection(db,"businesses",business.id,"messages");const [a,b]=await Promise.all([getDocs(query(ref,where("recipientUserIds","array-contains",currentUser.uid))),getDocs(query(ref,where("senderUid","==",currentUser.uid)))]);const m=new Map();[...a.docs,...b.docs].forEach(d=>m.set(d.id,{id:d.id,...d.data()}));teamMessages=[...m.values()].sort((x,y)=>(collaborationTimestampDate(y.createdAt)?.getTime()||0)-(collaborationTimestampDate(x.createdAt)?.getTime()||0));}catch(e){console.error(e);teamMessages=[]}
+}
+async function loadCollaborationEvents(){if(!business){collaborationEvents=[];return;}try{const s=await getDocs(query(collection(db,"businesses",business.id,"collaborationEvents"),orderBy("createdAt","desc"),limit(100)));collaborationEvents=s.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);collaborationEvents=[]}}
+async function logCollaborationEvent(type,recordId,moduleId,summary,targetUserIds=[],targetOrgUnitIds=[]){try{await addDoc(collection(db,"businesses",business.id,"collaborationEvents"),{type,recordId:recordId||"",module:moduleId||"",summary:summary||"",actorUid:currentUser.uid,actorName:currentActorName(),targetUserIds,targetOrgUnitIds,createdAt:serverTimestamp()})}catch(e){console.warn(e)}}
+function teamTargetOptions(selected=""){const p=businessMembers.filter(m=>m.id!==currentUser.uid).map(m=>`<option value="user:${m.id}" ${selected===`user:${m.id}`?"selected":""}>Person — ${safeText(m.displayName||m.email||"Team Member")}${m.role==="owner"?" (Owner)":""}</option>`).join("");const g=businessOrgUnits.map(x=>`<option value="group:${x.id}" ${selected===`group:${x.id}`?"selected":""}>Group — ${safeText(x.name)}</option>`).join("");return `<option value="">Choose a person or group…</option>${p}${g}`}
+function recipientsForTarget(target){if(!target)return[];const [k,id]=target.split(":");if(k==="user")return[id];return businessMembers.filter(m=>m.role==="employee"&&Array.isArray(m.orgUnitIds)&&m.orgUnitIds.includes(id)&&m.id!==currentUser.uid).map(m=>m.id)}
+function selectedTargetLabel(target){const[k,id]=target.split(":");return k==="user"?memberDisplayName(id):groupDisplayName(id)}
+function teamMessageIsUnread(m){return (m.recipientUserIds||[]).includes(currentUser.uid)&&!(m.readBy||[]).includes(currentUser.uid)}
+function teamWorkDirect(){return records.filter(r=>!completedStatus(r)&&isRecordAssignedDirectly(r))}
+function teamWorkGroups(){return records.filter(r=>!completedStatus(r)&&!isRecordAssignedDirectly(r)&&isRecordAssignedToMyGroups(r))}
+function updateTeamHubBadge(){const n=teamMessages.filter(teamMessageIsUnread).length+teamWorkDirect().length+teamWorkGroups().length;$("teamHubBadge").textContent=n>99?"99+":String(n);$("teamHubBadge").classList.toggle("hidden",n===0)}
+function teamWorkItemHtml(r){const t=toolById(r.module),h=recordDueHealth(r);return `<article class="team-work-item"><div class="team-work-item-top"><div><span class="eyebrow">${safeText(t.name.toUpperCase())}</span><h4>${safeText(r.title||"Untitled")}</h4></div><span class="record-health ${h.key}">${safeText(h.label)}</span></div><p>${safeText(r.details||t.desc)}</p><div class="team-work-assignees">${recordAssignmentLabels(r).map(a=>`<span class="collab-chip ${a.type}">${safeText(a.label)}</span>`).join("")}</div><div class="record-actions" style="margin-top:9px"><button class="mini-btn" data-view-record="${r.id}">Open Work</button>${quickActionButton(r)}</div></article>`}
+function renderTeamHub(){if(!business)return;const d=teamWorkDirect(),g=teamWorkGroups(),u=teamMessages.filter(teamMessageIsUnread).length;$("teamStatAssigned").textContent=d.length;$("teamStatGroup").textContent=g.length;$("teamStatUnread").textContent=u;$("teamStatActivity").textContent=collaborationEvents.length;$("teamDirectCount").textContent=d.length;$("teamGroupCount").textContent=g.length;$("teamDirectWork").innerHTML=d.length?d.map(teamWorkItemHtml).join(""):'<div class="empty-state">Nothing is assigned directly to you.</div>';$("teamGroupWork").innerHTML=g.length?g.map(teamWorkItemHtml).join(""):'<div class="empty-state">No open work is assigned to your groups.</div>';renderTeamMessages();renderTeamActivity();updateTeamHubBadge();bindRecordActions()}
+function switchTeamHubTab(n){teamHubTab=n;document.querySelectorAll("[data-team-hub-tab]").forEach(b=>b.classList.toggle("active",b.dataset.teamHubTab===n));$("teamHubWorkPanel").classList.toggle("hidden",n!=="work");$("teamHubMessagesPanel").classList.toggle("hidden",n!=="messages");$("teamHubActivityPanel").classList.toggle("hidden",n!=="activity")}
+function renderTeamMessages(){if(!$("teamMessageList"))return;const q=$("teamMessageSearch").value.trim().toLowerCase();let rows=teamMessages.filter(m=>teamMessageBox==="sent"?m.senderUid===currentUser.uid:(m.recipientUserIds||[]).includes(currentUser.uid));rows=rows.filter(m=>!q||`${m.subject||""} ${m.body||""} ${m.senderName||""} ${(m.recipientNames||[]).join(" ")}`.toLowerCase().includes(q));$("teamMessageResultCount").textContent=`${rows.length} message${rows.length===1?"":"s"}`;$("teamMessageList").innerHTML=rows.length?rows.map(m=>{const unread=teamMessageIsUnread(m),direction=m.senderUid===currentUser.uid?`To ${(m.recipientNames||[]).join(", ")||"Team"}`:`From ${m.senderName||"Team Member"}`;return `<article class="team-message-card ${unread?"unread":""}"><div><div class="team-message-meta">${safeText(direction)} • ${safeText(collaborationDateLabel(m.createdAt))}</div><h4>${safeText(m.subject||"No subject")}</h4><p>${safeText(m.body||"")}</p>${m.relatedRecordTitle?`<span class="collab-chip">Related: ${safeText(m.relatedRecordTitle)}</span>`:""}</div><div class="team-message-actions">${unread?`<button class="mini-btn" data-mark-message-read="${m.id}">Mark Read</button>`:""}${m.relatedRecordId?`<button class="mini-btn" data-message-record="${m.relatedRecordId}">Open Work</button>`:""}</div></article>`}).join(""):'<div class="empty-state">No messages here yet.</div>';document.querySelectorAll("[data-mark-message-read]").forEach(b=>b.onclick=()=>markTeamMessageRead(b.dataset.markMessageRead));document.querySelectorAll("[data-message-record]").forEach(b=>b.onclick=()=>{const r=records.find(x=>x.id===b.dataset.messageRecord);if(r)openRecordDetail(r);else alert("That record is outside your current tool access.")})}
+async function markTeamMessageRead(id){const m=teamMessages.find(x=>x.id===id);if(!m)return;const readBy=[...new Set([...(m.readBy||[]),currentUser.uid])];await updateDoc(doc(db,"businesses",business.id,"messages",id),{readBy,updatedAt:serverTimestamp()});m.readBy=readBy;renderTeamHub()}
+function collaborationEventIcon(t){return({record_created:"＋",record_updated:"✎",handoff:"→",comment:"☵",message:"✉"})[t]||"•"}
+function renderTeamActivity(){$("teamActivityList").innerHTML=collaborationEvents.length?collaborationEvents.map(e=>`<div class="team-activity-row"><span class="team-activity-icon">${safeText(collaborationEventIcon(e.type))}</span><div><strong>${safeText(e.actorName||"Team Member")}</strong><span>${safeText(e.summary||"Team activity")}</span></div><span>${safeText(collaborationDateLabel(e.createdAt))}</span></div>`).join(""):'<div class="empty-state">No collaboration activity yet.</div>'}
+function openTeamMessageModal(record=null,target=""){$("teamMessageForm").reset();$("teamMessageFormMessage").textContent="";$("teamMessageTarget").innerHTML=teamTargetOptions(target);$("teamMessageRecord").innerHTML=`<option value="">No related record</option>${records.map(r=>`<option value="${r.id}">${safeText(toolById(r.module).name)} — ${safeText(r.title||"Untitled")}</option>`).join("")}`;if(record){$("teamMessageRecord").value=record.id;$("teamMessageSubject").value=`${toolById(record.module).name}: ${record.title||"Work Item"}`}$("teamMessageModal").classList.remove("hidden")}
+async function sendTeamMessage(){const target=$("teamMessageTarget").value,recipientUserIds=recipientsForTarget(target);if(!target||!recipientUserIds.length){$("teamMessageFormMessage").textContent="Choose a person or a group with members.";return;}const related=records.find(r=>r.id===$("teamMessageRecord").value);const payload={senderUid:currentUser.uid,senderName:currentActorName(),recipientUserIds,recipientNames:recipientUserIds.map(memberDisplayName),targetLabel:selectedTargetLabel(target),subject:$("teamMessageSubject").value.trim(),body:$("teamMessageBody").value.trim(),relatedRecordId:related?.id||"",relatedRecordTitle:related?.title||"",relatedModule:related?.module||"",readBy:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp()};await addDoc(collection(db,"businesses",business.id,"messages"),payload);await logCollaborationEvent("message",related?.id||"",related?.module||"",`sent a message to ${payload.targetLabel}: ${payload.subject}`,recipientUserIds,[]);await Promise.all([loadTeamMessages(),loadCollaborationEvents()]);renderTeamHub();$("teamMessageModal").classList.add("hidden")}
+document.querySelectorAll("[data-team-hub-tab]").forEach(b=>b.addEventListener("click",()=>switchTeamHubTab(b.dataset.teamHubTab)));document.querySelectorAll("[data-message-box]").forEach(b=>b.addEventListener("click",()=>{teamMessageBox=b.dataset.messageBox;document.querySelectorAll("[data-message-box]").forEach(x=>x.classList.toggle("active",x===b));renderTeamMessages()}));$("teamMessageSearch").addEventListener("input",renderTeamMessages);$("teamHubMessageBtn").addEventListener("click",()=>openTeamMessageModal());$("teamActivityRefreshBtn").addEventListener("click",async()=>{await Promise.all([loadCollaborationEvents(),loadTeamMessages()]);renderTeamHub()});document.querySelectorAll("[data-close-team-message]").forEach(b=>b.addEventListener("click",()=>$("teamMessageModal").classList.add("hidden")));$("teamMessageModal").addEventListener("click",e=>{if(e.target===$("teamMessageModal"))$("teamMessageModal").classList.add("hidden")});$("teamMessageForm").addEventListener("submit",async e=>{e.preventDefault();$("teamMessageFormMessage").textContent="Sending...";try{await sendTeamMessage()}catch(err){console.error(err);$("teamMessageFormMessage").textContent="Could not send message. Check Firestore rules."}});
+function renderRecordCollaborationInputs(record=null){const u=new Set(recordAssignedUserIds(record)),g=new Set(recordAssignedGroupIds(record));$("recordAssigneeUsers").innerHTML=businessMembers.map(m=>`<label class="record-assignee-option"><input type="checkbox" data-record-assignee-user="${m.id}" ${u.has(m.id)?"checked":""}/><span><strong>${safeText(m.displayName||m.email||"Team Member")}${m.id===currentUser.uid?" (You)":""}</strong><span>${safeText(m.role==="owner"?"Business Owner":m.roleName||m.jobTitle||"Employee")}</span></span></label>`).join("");$("recordAssigneeGroups").innerHTML=businessOrgUnits.length?businessOrgUnits.map(x=>`<label class="record-assignee-option"><input type="checkbox" data-record-assignee-group="${x.id}" ${g.has(x.id)?"checked":""}/><span><strong>${safeText(x.name)}</strong><span>${safeText(x.type||"Custom Group")}</span></span></label>`).join(""):'<div class="empty-state">No groups created.</div>';const disabled=!canAssignRecords();document.querySelectorAll("[data-record-assignee-user],[data-record-assignee-group]").forEach(x=>x.disabled=disabled);$("recordAssignMeBtn").disabled=disabled;$("recordClearAssignmentsBtn").disabled=disabled}
+function selectedRecordCollaboration(){return{assignedUserIds:[...document.querySelectorAll("[data-record-assignee-user]:checked")].map(x=>x.dataset.recordAssigneeUser),assignedOrgUnitIds:[...document.querySelectorAll("[data-record-assignee-group]:checked")].map(x=>x.dataset.recordAssigneeGroup)}}
+$("recordAssignMeBtn").addEventListener("click",()=>{if(canAssignRecords()){const b=document.querySelector(`[data-record-assignee-user="${currentUser.uid}"]`);if(b)b.checked=true}});$("recordClearAssignmentsBtn").addEventListener("click",()=>{if(canAssignRecords())document.querySelectorAll("[data-record-assignee-user],[data-record-assignee-group]").forEach(x=>x.checked=false)});
+async function loadRecordComments(id){try{const s=await getDocs(query(collection(db,"businesses",business.id,"records",id,"comments"),orderBy("createdAt","asc")));return s.docs.map(d=>({id:d.id,...d.data()}))}catch(e){console.error(e);return[]}}
+function renderRecordAssignmentSummary(r){const labels=recordAssignmentLabels(r);$("recordAssignmentSummary").innerHTML=labels.length?labels.map(a=>`<span class="collab-chip ${a.type}">${safeText(a.label)}</span>`).join(""):'<span class="collab-chip">Unassigned</span>';$("recordCollaborationSummary").textContent=labels.length?`${labels.length} assignment${labels.length===1?"":"s"}`:"Open collaboration";$("recordHandoffTarget").innerHTML=teamTargetOptions();$("recordHandoffBar").classList.toggle("hidden",!canAssignRecords())}
+async function renderRecordConversation(id){const c=await loadRecordComments(id);$("recordConversationList").innerHTML=c.length?c.map(x=>`<article class="record-comment"><div class="record-comment-head"><strong>${safeText(x.authorName||"Team Member")}</strong><span>${safeText(collaborationDateLabel(x.createdAt))}</span></div><p>${safeText(x.message||"")}</p></article>`).join(""):'<div class="empty-state">No comments yet. Start the conversation.</div>'}
+async function handoffRecord(r){const target=$("recordHandoffTarget").value;if(!r||!canAssignRecords()||!target)return;const[k,id]=target.split(":"),assignedUserIds=k==="user"?[id]:[],assignedOrgUnitIds=k==="group"?[id]:[],label=selectedTargetLabel(target);await updateDoc(doc(db,"businesses",business.id,"records",r.id),{assignedUserIds,assignedOrgUnitIds,lastHandoffFromUid:currentUser.uid,lastHandoffFromName:currentActorName(),lastHandoffTo:label,handoffAt:serverTimestamp(),collaborationUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp(),updatedBy:currentUser.uid});await logCollaborationEvent("handoff",r.id,r.module,`handed off "${r.title}" to ${label}`,assignedUserIds,assignedOrgUnitIds);await Promise.all([loadRecords(),loadCollaborationEvents()]);const updated=records.find(x=>x.id===r.id);renderEverything();if(updated){renderRecordAssignmentSummary(updated);await renderRecordConversation(updated.id)}}
+$("recordHandoffBtn").addEventListener("click",async()=>{const r=records.find(x=>x.id===activeRecordCollaborationId);try{await handoffRecord(r)}catch(e){console.error(e);alert("Could not hand off this work. Check permissions and rules.")}});$("recordCommentForm").addEventListener("submit",async e=>{e.preventDefault();const r=records.find(x=>x.id===activeRecordCollaborationId),message=$("recordCommentText").value.trim();if(!r||!message)return;try{await addDoc(collection(db,"businesses",business.id,"records",r.id,"comments"),{authorUid:currentUser.uid,authorName:currentActorName(),message,createdAt:serverTimestamp()});await logCollaborationEvent("comment",r.id,r.module,`commented on "${r.title}"`,recordAssignedUserIds(r),recordAssignedGroupIds(r));$("recordCommentText").value="";await Promise.all([renderRecordConversation(r.id),loadCollaborationEvents()]);renderTeamHub()}catch(err){console.error(err);$("recordCommentMessage").textContent="Could not send comment. Check Firestore rules."}});
 
 async function loadRecords(){
   const ref=collection(db,"businesses",userProfile.businessId,"records");
@@ -2954,7 +3010,7 @@ function renderPackageQueue(items){
   return `<div class="package-layout"><section class="package-panel"><div class="panel-heading"><div><small>ACTION NEEDED</small><h3>Waiting for Pickup</h3></div><strong>${waiting.length}</strong></div>${waiting.length?waiting.map(card).join(""):'<div class="tool-empty">No packages waiting.</div>'}</section><section class="package-panel"><div class="panel-heading"><div><small>COMPLETED</small><h3>Picked Up / Returned</h3></div></div>${done.slice(0,12).map(card).join("")||'<div class="tool-empty">No completed packages yet.</div>'}</section></div>`;
 }
 
-function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot();if(activeToolWorkspaceId&&views?.toolWorkspace&&!$("toolWorkspaceView").classList.contains("hidden"))renderToolWorkspace(activeToolWorkspaceId)}
+function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot();renderTeamHub();if(activeToolWorkspaceId&&views?.toolWorkspace&&!$("toolWorkspaceView").classList.contains("hidden"))renderToolWorkspace(activeToolWorkspaceId)}
 function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!completedStatus(r)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||completedStatus(r))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
 function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,24).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong><small>${safeText(toolExperience(t.id).mode.replace(/([A-Z])/g," $1").trim())}</small></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{activeToolWorkspaceId=btn.dataset.toolOpen;switchView("toolWorkspace");renderToolWorkspace(activeToolWorkspaceId);});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
@@ -3099,6 +3155,7 @@ function recurringNextButton(record){
   if(!recurring||recurring==="No")return "";
   return `<button class="mini-btn" data-record-action="create_next_task" data-record-id="${record.id}">Create Next</button>`;
 }
+function recordAssignmentChipHtml(r){const labels=recordAssignmentLabels(r);return labels.length?`<div class="team-work-assignees">${labels.slice(0,4).map(a=>`<span class="collab-chip ${a.type}">${safeText(a.label)}</span>`).join("")}${labels.length>4?`<span class="collab-chip">+${labels.length-4}</span>`:""}</div>`:""}
 function recordHtml(r){
   const t=toolById(r.module),health=recordDueHealth(r);
   return `<div class="record-item">
@@ -3112,6 +3169,7 @@ function recordHtml(r){
         <span class="record-health ${health.key}">${safeText(health.label)}</span>
       </div>
       <div class="record-fields-preview">${recordFieldPreview(r)}</div>
+      ${recordAssignmentChipHtml(r)}
     </div>
     <div class="record-actions">
       ${quickActionButton(r)}
@@ -3206,7 +3264,8 @@ async function patchRecord(record,updates){
     updatedAt:serverTimestamp(),
     updatedBy:currentUser.uid
   });
-  await loadRecords();
+  await logCollaborationEvent("record_updated",record.id,record.module,`updated "${record.title}"`,recordAssignedUserIds(record),recordAssignedGroupIds(record));
+  await Promise.all([loadRecords(),loadCollaborationEvents()]);
   renderEverything();
 }
 async function duplicateRecord(record){
@@ -3218,6 +3277,7 @@ async function duplicateRecord(record){
     dueDate:record.dueDate||"",
     details:record.details||"",
     fields:{...(record.fields||{})},
+    assignedUserIds:[...(record.assignedUserIds||[])],assignedOrgUnitIds:[...(record.assignedOrgUnitIds||[])],collaborationUpdatedAt:serverTimestamp(),
     createdAt:serverTimestamp(),
     createdBy:currentUser.uid,
     updatedAt:serverTimestamp(),
@@ -3273,7 +3333,7 @@ async function saveChecklistProgress(reset=false){
 }
 function recordDetailFieldRows(record){
   const t=toolById(record.module),values=record.fields||{};
-  return t.fields.filter(f=>f.key!=="title").map(f=>{
+  return t.fields.filter(f=>f.key!=="title"&&f.key!=="assignedTo").map(f=>{
     let value=values[f.key];
     if(f.key==="items"){
       const items=String(value||"").split("\n").map(x=>x.trim()).filter(Boolean);
@@ -3283,8 +3343,9 @@ function recordDetailFieldRows(record){
     return `<div class="record-detail-field"><span>${safeText(f.label)}</span><strong>${safeText(prettyValue(value)||"—")}</strong></div>`;
   }).join("");
 }
-function openRecordDetail(record){
+async function openRecordDetail(record){
   const t=toolById(record.module),health=recordDueHealth(record);
+  activeRecordCollaborationId=record.id;
   $("recordDetailEyebrow").textContent=t.category.toUpperCase();
   $("recordDetailTitle").textContent=record.title||"Untitled";
   $("recordDetailSubtitle").textContent=t.name;
@@ -3296,12 +3357,14 @@ function openRecordDetail(record){
     <div><span>Tool</span><strong>${safeText(t.name)}</strong></div>`;
   $("recordDetailFields").innerHTML=recordDetailFieldRows(record);
   $("recordDetailNotes").innerHTML=record.details?`<strong>Notes</strong><br>${safeText(record.details)}`:"No additional notes.";
+  renderRecordAssignmentSummary(record);$("recordCommentText").value="";$("recordCommentMessage").textContent="";await renderRecordConversation(record.id);
   const a=getRecordAction(record);
   const canRunAction=a&&(!recordActionRequiresEdit(a.key)||canEditRecords());
   $("recordDetailActions").innerHTML=`
     ${canRunAction?`<button class="btn btn-primary" data-detail-record-action="${a.key}" data-record-id="${record.id}">${safeText(a.label)}</button>`:""}
     ${recurringNextButton(record).replaceAll("data-record-action=","data-detail-record-action=")}
     ${canEditRecords()?`<button class="btn btn-secondary" data-detail-edit="${record.id}">Edit</button>`:""}
+    <button class="btn btn-secondary" data-detail-message="${record.id}">Message Team</button>
     ${canCreateRecords()?`<button class="btn btn-secondary" data-detail-duplicate="${record.id}">Duplicate</button>`:""}`;
   document.querySelectorAll("[data-detail-record-action]").forEach(btn=>btn.onclick=async()=>{
     $("recordDetailModal").classList.add("hidden");
@@ -3311,6 +3374,7 @@ function openRecordDetail(record){
     $("recordDetailModal").classList.add("hidden");
     openRecordModal(records.find(r=>r.id===btn.dataset.detailEdit));
   });
+  document.querySelectorAll("[data-detail-message]").forEach(btn=>btn.onclick=()=>openTeamMessageModal(records.find(r=>r.id===btn.dataset.detailMessage)));
   document.querySelectorAll("[data-detail-duplicate]").forEach(btn=>btn.onclick=async()=>{
     $("recordDetailModal").classList.add("hidden");
     await duplicateRecord(records.find(r=>r.id===btn.dataset.detailDuplicate));
@@ -3486,7 +3550,7 @@ function renderDynamicFields(moduleId,record=null){
   $("toolFormContext").innerHTML=`<span class="tool-form-context-icon">${safeText(t.icon)}</span><div><strong>${safeText(t.name)} workflow</strong><span>${safeText(cfg.formIntro)}</span></div>`;
   $("toolNotesLabel").textContent=cfg.notes||"Notes";
   $("recordSaveBtn").textContent=record?`Save ${t.name}`:cfg.addLabel.replace(/^\+\s*/,"");
-  const fieldMap=new Map(t.fields.map(f=>[f.key,f]));
+  const fieldMap=new Map(t.fields.filter(f=>f.key!=="assignedTo").map(f=>[f.key,f]));
   const used=new Set();
   const sections=(cfg.sections||[]).map(section=>{
     const fields=(section.keys||[]).map(key=>fieldMap.get(key)).filter(Boolean);
@@ -3494,7 +3558,7 @@ function renderDynamicFields(moduleId,record=null){
     if(!fields.length)return "";
     return `<section class="tool-form-section"><div class="tool-form-section-head"><strong>${safeText(section.title)}</strong><span>${safeText(section.hint||"")}</span></div>${fields.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("")}</section>`;
   }).join("");
-  const leftovers=t.fields.filter(f=>!used.has(f.key));
+  const leftovers=t.fields.filter(f=>f.key!=="assignedTo"&&!used.has(f.key));
   $("dynamicFields").className="dynamic-fields tool-sectioned-fields";
   $("dynamicFields").innerHTML=sections+(leftovers.length?`<section class="tool-form-section"><div class="tool-form-section-head"><strong>Additional Details</strong><span>Other information for this ${safeText(t.name.toLowerCase())} record.</span></div>${leftovers.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("")}</section>`:"");
   $("dueDateLabel").childNodes[0].nodeValue=`${t.dueLabel} `;
@@ -3505,7 +3569,7 @@ function renderDynamicFields(moduleId,record=null){
 function openRecordModal(record=null){
   if(record&&!canEditRecords()){alert("Your employee account cannot edit records.");return;}
   if(!record&&!canCreateRecords()){alert("Your employee account cannot create records.");return;}
-  $("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||(activeToolWorkspaceId&&canAccessModule(activeToolWorkspaceId)?activeToolWorkspaceId:($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks"));$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:toolExperience(moduleId).addLabel.replace(/^\+\s*/,"");renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
+  $("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||(activeToolWorkspaceId&&canAccessModule(activeToolWorkspaceId)?activeToolWorkspaceId:($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks"));$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:toolExperience(moduleId).addLabel.replace(/^\+\s*/,"");renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";renderRecordCollaborationInputs(record);recordModal.classList.remove("hidden");}
 $("recordModule").addEventListener("change",()=>{$("recordModalTitle").textContent=toolExperience($("recordModule").value).addLabel.replace(/^\+\s*/,"");renderDynamicFields($("recordModule").value,null)});
 $("addRecordBtn").addEventListener("click",()=>openRecordModal());$("quickAddBtn").addEventListener("click",()=>openRecordModal());document.querySelectorAll("[data-close-record]").forEach(btn=>btn.addEventListener("click",()=>recordModal.classList.add("hidden")));recordModal.addEventListener("click",e=>{if(e.target===recordModal)recordModal.classList.add("hidden")});
 $("recordForm").addEventListener("submit",async e=>{
@@ -3515,23 +3579,22 @@ $("recordForm").addEventListener("submit",async e=>{
   if(id&&!canEditRecords()){$("recordMessage").textContent="Your account cannot edit records.";return;}
   if(!id&&!canCreateRecords()){$("recordMessage").textContent="Your account cannot create records.";return;}
   for(const f of t.fields){
+    if(f.key==="assignedTo")continue;
     const el=$(`toolField_${f.key}`);
     const value=el?.value?.trim?el.value.trim():el?.value||"";
-    if(f.required && !value){
-      $("recordMessage").textContent=`${f.label} is required.`;
-      el?.focus();
-      return;
-    }
+    if(f.required && !value){$("recordMessage").textContent=`${f.label} is required.`;el?.focus();return;}
     if(f.key==="title")title=value;else fields[f.key]=value;
   }
+  const collaboration=selectedRecordCollaboration();
+  if(t.fields.some(f=>f.key==="assignedTo"))fields.assignedTo=[...collaboration.assignedUserIds.map(memberDisplayName),...collaboration.assignedOrgUnitIds.map(groupDisplayName)].join(", ");
   let smartStatus=$("recordStatus").value;
   if(moduleId==="supplies") smartStatus=calculateSupplyStatus(fields);
   if(moduleId==="visitor-log" && fields.departure) smartStatus="Checked Out";
   if(moduleId==="package-log" && fields.pickupDate) smartStatus="Picked Up";
   if(moduleId==="asset-checkout" && fields.returnDate) smartStatus="Returned";
   if(moduleId==="training" && fields.completionDate && smartStatus==="Assigned") smartStatus="Completed";
-  const payload={module:moduleId,title,status:smartStatus,dueDate:$("recordDueDate").value||"",details:$("recordDetails").value.trim(),fields,updatedAt:serverTimestamp(),updatedBy:currentUser.uid};
-  try{if(id)await updateDoc(doc(db,"businesses",business.id,"records",id),payload);else await addDoc(collection(db,"businesses",business.id,"records"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});await loadRecords();renderEverything();recordModal.classList.add("hidden");}catch(error){console.error(error);$("recordMessage").textContent="Could not save this item. Check Firestore rules.";}
+  const payload={module:moduleId,title,status:smartStatus,dueDate:$("recordDueDate").value||"",details:$("recordDetails").value.trim(),fields,assignedUserIds:collaboration.assignedUserIds,assignedOrgUnitIds:collaboration.assignedOrgUnitIds,collaborationUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp(),updatedBy:currentUser.uid};
+  try{let savedId=id;if(id){await updateDoc(doc(db,"businesses",business.id,"records",id),payload);await logCollaborationEvent("record_updated",id,moduleId,`updated "${title}"`,collaboration.assignedUserIds,collaboration.assignedOrgUnitIds);}else{const created=await addDoc(collection(db,"businesses",business.id,"records"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});savedId=created.id;await logCollaborationEvent("record_created",savedId,moduleId,`created "${title}"`,collaboration.assignedUserIds,collaboration.assignedOrgUnitIds);}await Promise.all([loadRecords(),loadCollaborationEvents()]);renderEverything();recordModal.classList.add("hidden");}catch(error){console.error(error);$("recordMessage").textContent="Could not save this item. Check Firestore rules.";}
 });
 
 $("businessSettingsForm").addEventListener("submit",async e=>{
@@ -3548,7 +3611,7 @@ $("businessSettingsForm").addEventListener("submit",async e=>{
   Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");
 });
 if($("monthlyPicker")){$("monthlyPicker").value=monthKeyFromDate(new Date());$("monthlyPicker").addEventListener("change",renderMonthlyOverview);$("monthlyPrevBtn").addEventListener("click",()=>shiftMonth(-1));$("monthlyNextBtn").addEventListener("click",()=>shiftMonth(1));}
-const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],toolWorkspace:[$("toolWorkspaceView"),"BUSINESS TOOL","Tool Workspace"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],organization:[$("organizationView"),"FREEDOM STRUCTURE","Organization"],roles:[$("rolesView"),"ACCESS TEMPLATES","Roles & Access"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
+const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],teamHub:[$("teamHubView"),"COLLABORATION","Team Hub"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],toolWorkspace:[$("toolWorkspaceView"),"BUSINESS TOOL","Tool Workspace"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],organization:[$("organizationView"),"FREEDOM STRUCTURE","Organization"],roles:[$("rolesView"),"ACCESS TEMPLATES","Roles & Access"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
 function switchView(name){
   if(!views[name])return;
   if(!canAccessBusinessView(name)){name="dashboard";}
@@ -3556,6 +3619,7 @@ function switchView(name){
   document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));
   $("viewEyebrow").textContent=name==="toolWorkspace"&&activeToolWorkspaceId?toolById(activeToolWorkspaceId).category.toUpperCase():views[name][1];
   $("viewTitle").textContent=name==="toolWorkspace"&&activeToolWorkspaceId?toolById(activeToolWorkspaceId).name:views[name][2];
+  if(name==="teamHub")renderTeamHub();
   if(name==="employees"&&canManageEmployees())renderEmployeeAccounts();
   if(name==="organization"&&canManageOrganization())renderOrganization();
   if(name==="roles"&&isBusinessOwnerAccount())renderRoles();
