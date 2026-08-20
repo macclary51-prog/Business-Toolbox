@@ -745,3 +745,227 @@ body.owner-previewing-public{padding-bottom:92px}
   .org-node-actions{justify-content:flex-start}
   .org-node-children{padding-left:16px}
 }
+
+
+/* ============================================================
+   UNIQUE TOOL WORKSPACES
+   Shared Silverforge shell; each module gets a different workflow.
+   ============================================================ */
+.tool-workspace-shell{display:grid;gap:18px}
+.tool-workspace-heading{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:18px;
+  padding:18px;border:1px solid var(--line);border-radius:15px;background:#0b192c
+}
+.tool-workspace-title-wrap{display:flex;align-items:center;gap:13px;min-width:0}
+.tool-workspace-title-wrap>div{min-width:0}
+.tool-workspace-title-wrap h2{margin:4px 0 5px}
+.tool-workspace-title-wrap p{margin:0;color:var(--muted);line-height:1.5;max-width:720px}
+.tool-workspace-title-wrap small{color:#8197b1;font-size:.68rem;font-weight:800;letter-spacing:.08em}
+.tool-workspace-icon{
+  width:52px;height:52px;display:grid;place-items:center;flex:0 0 52px;
+  border:1px solid var(--line);border-radius:14px;background:#132a49;font-size:1.35rem
+}
+.tool-workspace-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tool-workspace-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tool-workspace-stat{
+  padding:13px;border:1px solid var(--line);border-radius:11px;background:#0d1c31
+}
+.tool-workspace-stat span{display:block;color:var(--muted);font-size:.68rem}
+.tool-workspace-stat strong{display:block;margin-top:5px;font-size:1.15rem}
+.tool-workspace-content{min-height:280px}
+.tool-empty{
+  padding:35px 20px;text-align:center;border:1px dashed var(--line);border-radius:13px;
+  color:var(--muted);background:#0a1727
+}
+
+/* Task board */
+.task-board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.task-column{border:1px solid var(--line);border-radius:13px;background:#091725;overflow:hidden}
+.task-column-head{display:flex;justify-content:space-between;padding:12px 13px;border-bottom:1px solid var(--line)}
+.task-column-head strong{font-size:.78rem}.task-column-head span{color:var(--muted);font-size:.68rem}
+.task-column-body{display:grid;gap:8px;padding:9px;min-height:180px}
+.task-work-card{padding:11px;border:1px solid var(--line);border-radius:10px;background:#0f2037}
+.task-work-card h4{margin:0 0 7px;font-size:.82rem}
+.task-card-meta{display:flex;gap:5px;flex-wrap:wrap}
+.task-priority{padding:3px 6px;border-radius:999px;border:1px solid var(--line);font-size:.61rem}
+.task-priority.urgent,.task-priority.high{color:#ffc0c0;border-color:rgba(230,82,82,.3);background:rgba(230,82,82,.08)}
+.task-priority.medium{color:#ffe0a8;border-color:rgba(230,166,64,.3)}
+.task-work-card .record-actions{margin-top:9px;justify-content:flex-start}
+
+/* Checklist library */
+.checklist-library{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:11px}
+.checklist-library-card{padding:14px;border:1px solid var(--line);border-radius:13px;background:#0d1c31}
+.checklist-library-card h4{margin:0 0 7px}
+.checklist-preview-items{display:grid;gap:5px;margin:10px 0;color:#cbd7e7;font-size:.7rem}
+.checklist-preview-items span{display:flex;gap:7px}.checklist-preview-items i{font-style:normal;color:#6fa6ec}
+.mini-progress-track{height:7px;border-radius:999px;background:#091522;overflow:hidden;border:1px solid var(--line)}
+.mini-progress-fill{height:100%;background:#4287db}
+
+/* Asset inventory */
+.asset-inventory-grid,.fleet-grid,.warranty-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:11px}
+.asset-card,.fleet-card,.warranty-card{
+  padding:14px;border:1px solid var(--line);border-radius:13px;background:#0d1c31
+}
+.asset-card-head,.fleet-card-head,.warranty-card-head{display:flex;justify-content:space-between;gap:10px}
+.asset-card h4,.fleet-card h4,.warranty-card h4{margin:0}
+.asset-data-grid,.fleet-data-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.asset-data-grid div,.fleet-data-grid div{padding:8px;border-radius:8px;background:#0a1728}
+.asset-data-grid span,.fleet-data-grid span{display:block;color:var(--muted);font-size:.61rem}
+.asset-data-grid strong,.fleet-data-grid strong{display:block;margin-top:3px;font-size:.72rem}
+
+/* Maintenance service timeline */
+.service-timeline,.logbook-timeline{display:grid;gap:9px}
+.service-entry,.logbook-entry{display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:start;padding:13px;border:1px solid var(--line);border-radius:11px;background:#0d1c31}
+.service-date,.logbook-date{font-size:.7rem;color:#9eb2ca;font-weight:700}
+.service-entry h4,.logbook-entry h4{margin:0 0 5px;font-size:.82rem}
+
+/* Renewal radar */
+.renewal-radar{display:grid;gap:9px}
+.renewal-row{display:grid;grid-template-columns:minmax(0,1fr) 140px auto;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:11px;background:#0d1c31}
+.expiry-meter{height:7px;background:#081522;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.expiry-meter span{display:block;height:100%;background:#4d91e4}
+.expiry-days{font-size:.7rem;font-weight:800}.expiry-days.danger{color:#ffb1b1}.expiry-days.warn{color:#ffd99d}
+
+/* Incident cases */
+.incident-case-list,.complaint-ticket-list{display:grid;gap:9px}
+.case-card,.complaint-ticket{
+  display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:12px;padding:13px;
+  border:1px solid var(--line);border-radius:11px;background:#0d1c31
+}
+.case-severity{border-radius:999px;background:#c96b4a}
+.case-severity.safety,.case-severity.security{background:#d34f4f}
+.case-card h4,.complaint-ticket h4{margin:0 0 5px}
+
+/* Handoff feed */
+.handoff-feed{display:grid;gap:9px;max-width:900px}
+.handoff-message{padding:14px;border:1px solid var(--line);border-radius:14px 14px 14px 4px;background:#0e213a}
+.handoff-route{display:flex;gap:6px;align-items:center;color:#a8bcd4;font-size:.68rem}
+.handoff-message h4{margin:7px 0 5px}
+
+/* Checkout desk */
+.checkout-desk{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+.checkout-active,.checkout-returned{border:1px solid var(--line);border-radius:13px;background:#091725;padding:12px}
+.checkout-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:11px;border-bottom:1px solid rgba(255,255,255,.055)}
+.checkout-item:last-child{border-bottom:0}
+.checkout-item h4{margin:0 0 4px}
+
+/* Employee directory records */
+.employee-directory-grid,.vendor-directory-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.directory-card{padding:14px;border:1px solid var(--line);border-radius:13px;background:#0d1c31}
+.directory-avatar{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#173150;border:1px solid var(--line);font-weight:800}
+.directory-card-head{display:flex;gap:10px;align-items:center}
+.directory-card h4{margin:0 0 3px}
+.directory-contact{display:grid;gap:5px;margin:11px 0;color:#aabed5;font-size:.68rem}
+
+/* Photo gallery */
+.proof-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.proof-card{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#0d1c31}
+.proof-visual{height:135px;display:grid;place-items:center;background:#0a1728;font-size:2rem;color:#7c9fc8}
+.proof-visual img{width:100%;height:100%;object-fit:cover}
+.proof-body{padding:12px}.proof-body h4{margin:0 0 5px}
+
+/* Subscription ledger */
+.subscription-ledger{display:grid;gap:9px}
+.subscription-row{display:grid;grid-template-columns:minmax(0,1fr) 130px 150px auto;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:11px;background:#0d1c31}
+.money-amount{font-size:.95rem;font-weight:800}.billing-cycle{color:var(--muted);font-size:.67rem}
+
+/* Documents register */
+.document-register{display:grid;gap:7px}
+.document-row{display:grid;grid-template-columns:minmax(0,1.2fr) .8fr .8fr .7fr auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#0d1c31}
+.document-row small{display:block;color:var(--muted)}
+
+/* Training matrix */
+.training-matrix{overflow:auto;border:1px solid var(--line);border-radius:12px}
+.training-table{width:100%;border-collapse:collapse;min-width:720px}
+.training-table th,.training-table td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:.7rem}
+.training-table th{background:#0a1728;color:#98aec7}.training-table tr:last-child td{border-bottom:0}
+
+/* Website monitors */
+.website-status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px}
+.website-status-card{padding:15px;border:1px solid var(--line);border-radius:13px;background:#0d1c31}
+.website-status-line{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.status-dot{width:9px;height:9px;border-radius:50%;background:#48bd78;display:inline-block;margin-right:6px}
+.status-dot.down{background:#db5d5d}.status-dot.degraded{background:#e5ad55}
+
+/* QR labels */
+.qr-label-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px}
+.qr-label-card{display:grid;grid-template-columns:82px 1fr;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#0d1c31}
+.qr-placeholder{height:82px;display:grid;place-items:center;background:#f4f6f8;color:#111;border-radius:7px;font-size:1.4rem;font-weight:900}
+
+/* Inventory supplies */
+.supply-inventory{display:grid;gap:9px}
+.supply-row{display:grid;grid-template-columns:minmax(0,1fr) 170px 110px auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:11px;background:#0d1c31}
+.stock-meter{height:8px;border-radius:999px;background:#091522;border:1px solid var(--line);overflow:hidden}
+.stock-meter span{display:block;height:100%;background:#4a95df}.stock-meter span.low{background:#d5a244}.stock-meter span.out{background:#d85a5a}
+
+/* Suggestions */
+.idea-board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.idea-column{border:1px solid var(--line);border-radius:12px;background:#091725;overflow:hidden}
+.idea-column h4{margin:0;padding:11px;border-bottom:1px solid var(--line);font-size:.75rem}
+.idea-card{margin:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0f2036}
+.idea-card strong{font-size:.75rem}
+
+/* Reception + packages */
+.reception-layout,.package-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+.reception-panel,.package-panel{padding:12px;border:1px solid var(--line);border-radius:13px;background:#091725}
+.reception-card,.package-card{padding:12px;border-bottom:1px solid var(--line)}
+.reception-card:last-child,.package-card:last-child{border-bottom:0}
+
+/* Unique form shell */
+.tool-record-form{gap:14px}
+.tool-form-context{
+  display:flex;gap:12px;align-items:flex-start;padding:13px;border:1px solid var(--line);
+  border-radius:12px;background:#0c1c30
+}
+.tool-form-context-icon{
+  width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;border-radius:10px;
+  background:#173251;border:1px solid var(--line);font-size:1.05rem
+}
+.tool-form-context strong{display:block;font-size:.8rem}
+.tool-form-context span{display:block;margin-top:4px;color:var(--muted);font-size:.68rem;line-height:1.45}
+.tool-form-switcher{display:none}
+.dynamic-fields.tool-sectioned-fields{display:grid;gap:12px}
+.tool-form-section{
+  display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:13px;border:1px solid var(--line);
+  border-radius:12px;background:#0a182a
+}
+.tool-form-section-head{grid-column:1/-1;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+.tool-form-section-head strong{display:block;font-size:.78rem}
+.tool-form-section-head span{display:block;margin-top:3px;color:var(--muted);font-size:.66rem}
+.tool-form-section label{display:flex;flex-direction:column;gap:6px;font-size:.72rem;font-weight:700}
+.tool-form-section .field-wide{grid-column:1/-1}
+.tool-form-footer-fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.tool-form-footer-fields label,.tool-notes-field{display:flex;flex-direction:column;gap:6px;font-size:.72rem;font-weight:700}
+
+/* Per-tool form identities */
+.record-modal-card[data-tool-form="tasks"] .tool-form-context{border-left:4px solid #4d91e4}
+.record-modal-card[data-tool-form="checklists"] .tool-form-context{border-left:4px solid #65b788}
+.record-modal-card[data-tool-form="equipment"] .tool-form-context{border-left:4px solid #a67ad8}
+.record-modal-card[data-tool-form="maintenance"] .tool-form-context{border-left:4px solid #d8a34f}
+.record-modal-card[data-tool-form="renewals"] .tool-form-context{border-left:4px solid #e07070}
+.record-modal-card[data-tool-form="incidents"] .tool-form-context{border-left:4px solid #df664e}
+.record-modal-card[data-tool-form="shift-handoff"] .tool-form-context{border-left:4px solid #5c9fc8}
+.record-modal-card[data-tool-form="asset-checkout"] .tool-form-context{border-left:4px solid #9e7dca}
+.record-modal-card[data-tool-form="vehicles"] .tool-form-context{border-left:4px solid #5fa8b2}
+.record-modal-card[data-tool-form="supplies"] .tool-form-context{border-left:4px solid #7bb668}
+.record-modal-card[data-tool-form="complaints"] .tool-form-context{border-left:4px solid #c87373}
+.record-modal-card[data-tool-form="visitor-log"] .tool-form-context{border-left:4px solid #5a97d7}
+.record-modal-card[data-tool-form="package-log"] .tool-form-context{border-left:4px solid #ca9a55}
+
+@media(max-width:1000px){
+  .tool-workspace-stats{grid-template-columns:1fr 1fr}
+  .task-board,.idea-board{grid-template-columns:1fr 1fr}
+  .checkout-desk,.reception-layout,.package-layout{grid-template-columns:1fr}
+  .subscription-row,.supply-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px){
+  .tool-workspace-heading{align-items:stretch;flex-direction:column}
+  .tool-workspace-title-wrap{align-items:flex-start;flex-wrap:wrap}
+  .tool-workspace-actions .btn{flex:1}
+  .tool-workspace-stats,.task-board,.idea-board{grid-template-columns:1fr}
+  .tool-form-section,.tool-form-footer-fields{grid-template-columns:1fr}
+  .tool-form-section .field-wide{grid-column:auto}
+  .service-entry,.logbook-entry,.renewal-row,.case-card,.complaint-ticket,
+  .subscription-row,.document-row,.supply-row{grid-template-columns:1fr}
+  .employee-directory-grid,.vendor-directory-grid,.asset-inventory-grid,.fleet-grid,.warranty-grid{grid-template-columns:1fr}
+}
