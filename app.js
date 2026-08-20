@@ -874,8 +874,42 @@ $("ownerRefreshBtn").addEventListener("click",async()=>{
 $("ownerLogoutBtn").addEventListener("click",()=>signOut(auth));
 
 async function loadRecords(){const ref=collection(db,"businesses",userProfile.businessId,"records");const snap=await getDocs(query(ref,orderBy("createdAt","desc")));records=snap.docs.map(d=>({id:d.id,...d.data()}));}
+
+function recordDateForMonthly(record){
+  const value=record.createdAt||record.updatedAt;
+  if(!value)return null;
+  if(typeof value.toDate==="function")return value.toDate();
+  if(value.seconds)return new Date(value.seconds*1000);
+  const d=new Date(value); return Number.isNaN(d.getTime())?null:d;
+}
+function monthKeyFromDate(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}`;}
+function monthLabel(key){const [y,m]=key.split("-").map(Number);return new Date(y,m-1,1).toLocaleDateString(undefined,{month:"long",year:"numeric"});}
+function isCompletedLike(status=""){return ["complete","completed","resolved","approved","implemented","picked up","checked out","operational","current"].includes(String(status).toLowerCase());}
+function selectedMonthKey(){return $("monthlyPicker")?.value||monthKeyFromDate(new Date());}
+function setMonthKey(key){if($("monthlyPicker"))$("monthlyPicker").value=key;renderMonthlyOverview();}
+function shiftMonth(delta){const [y,m]=selectedMonthKey().split("-").map(Number);setMonthKey(monthKeyFromDate(new Date(y,m-1+delta,1)));}
+function renderMonthlyOverview(){
+  if(!$("monthlyPicker"))return;
+  const key=selectedMonthKey();
+  const monthRecords=records.filter(r=>{const d=recordDateForMonthly(r);return d&&monthKeyFromDate(d)===key;});
+  const completed=monthRecords.filter(r=>isCompletedLike(r.status)).length;
+  const toolsUsed=[...new Set(monthRecords.map(r=>r.module).filter(Boolean))];
+  $("monthlyStatCreated").textContent=monthRecords.length;
+  $("monthlyStatCompleted").textContent=completed;
+  $("monthlyStatOpen").textContent=monthRecords.length-completed;
+  $("monthlyStatTools").textContent=toolsUsed.length;
+  $("monthlyRecordTitle").textContent=`${monthLabel(key)} Records`;
+  const byTool=toolsUsed.map(id=>({tool:toolById(id),count:monthRecords.filter(r=>r.module===id).length})).sort((a,b)=>b.count-a.count);
+  $("monthlyToolActivity").innerHTML=byTool.length?byTool.map(({tool,count})=>`<div class="monthly-tool-row"><div><strong>${safeText(tool.icon)} ${safeText(tool.name)}</strong><span>${safeText(tool.category)}</span></div><span class="monthly-tool-count">${count}</span></div>`).join(""):'<div class="empty-state">No tool activity in this month.</div>';
+  const counts={}; monthRecords.forEach(r=>{const s=r.status||"Open";counts[s]=(counts[s]||0)+1;});
+  const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  $("monthlyStatusBreakdown").innerHTML=rows.length?rows.map(([status,count])=>`<div class="monthly-status-row"><div><strong>${safeText(status)}</strong><span>${isCompletedLike(status)?"Completed / resolved":"Open / in progress"}</span></div><span class="monthly-status-count">${count}</span></div>`).join(""):'<div class="empty-state">No statuses to show for this month.</div>';
+  $("monthlyRecords").innerHTML=monthRecords.length?monthRecords.slice().sort((a,b)=>(recordDateForMonthly(b)?.getTime()||0)-(recordDateForMonthly(a)?.getTime()||0)).map(recordHtml).join(""):`<div class="empty-state">No records were created in ${safeText(monthLabel(key))}.</div>`;
+  bindRecordActions();
+}
+
 function enabledModules(){return Array.isArray(business.enabledModules)?business.enabledModules:defaultEnabledModules}
-function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords()}
+function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview()}
 function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!["Complete","Archived"].includes(r.status)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||["Complete","Archived"].includes(r.status))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
 function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,12).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{switchView("records");$("recordModuleFilter").value=btn.dataset.toolOpen;renderRecords();});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
@@ -926,6 +960,7 @@ $("recordForm").addEventListener("submit",async e=>{
 });
 
 $("businessSettingsForm").addEventListener("submit",async e=>{e.preventDefault();const updates={name:$("settingsBusinessName").value.trim(),ownerName:$("settingsOwnerName").value.trim(),phone:$("settingsPhone").value.trim(),website:$("settingsWebsite").value.trim(),updatedAt:serverTimestamp()};await updateDoc(doc(db,"businesses",business.id),updates);Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");});
-const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
+if($("monthlyPicker")){$("monthlyPicker").value=monthKeyFromDate(new Date());$("monthlyPicker").addEventListener("change",renderMonthlyOverview);$("monthlyPrevBtn").addEventListener("click",()=>shiftMonth(-1));$("monthlyNextBtn").addEventListener("click",()=>shiftMonth(1));}
+const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
 function switchView(name){Object.entries(views).forEach(([key,[el]])=>el.classList.toggle("hidden",key!==name));document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));$("viewEyebrow").textContent=views[name][1];$("viewTitle").textContent=views[name][2];if(window.innerWidth<=780)$("sidebar").classList.remove("open");}
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>switchView(btn.dataset.view)));document.querySelectorAll("[data-go-tools]").forEach(btn=>btn.addEventListener("click",()=>switchView("tools")));$("sidebarToggle").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
