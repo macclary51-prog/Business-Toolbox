@@ -606,7 +606,7 @@ function renderOwnerTools(){
   $("ownerToolsGrid").innerHTML=filtered.map(t=>{
     const enabledCount=ownerBusinesses.filter(b=>Array.isArray(b.enabledModules)&&b.enabledModules.includes(t.id)).length;
     const percent=ownerBusinesses.length ? Math.round((enabledCount/ownerBusinesses.length)*100) : 0;
-    return `<article class="owner-tool-card">
+    return `<article class="owner-tool-card" data-owner-tool-preview="${t.id}" tabindex="0" role="button" aria-label="Preview ${safeText(t.name)} form">
       <div class="owner-tool-card-top">
         <span class="owner-tool-card-icon">${safeText(t.icon)}</span>
         <span class="owner-tool-card-category">${safeText(t.category)}</span>
@@ -617,9 +617,88 @@ function renderOwnerTools(){
         <span>Enabled by</span>
         <strong>${enabledCount} business${enabledCount===1?"":"es"} (${percent}%)</strong>
       </div>
+      <div class="owner-tool-open-hint">Open form preview →</div>
     </article>`;
   }).join("") || '<div class="empty-state">No tools match your search.</div>';
+
+  document.querySelectorAll("[data-owner-tool-preview]").forEach(card=>{
+    const open=()=>openOwnerToolPreview(card.dataset.ownerToolPreview);
+    card.addEventListener("click",open);
+    card.addEventListener("keydown",e=>{
+      if(e.key==="Enter"||e.key===" "){
+        e.preventDefault();
+        open();
+      }
+    });
+  });
 }
+
+
+function ownerPreviewFieldHtml(field){
+  const required=field.required?" • Required":" • Optional";
+  const typeLabel=field.type==="select"
+    ? `Select: ${(field.options||[]).join(", ")}`
+    : field.type==="textarea" ? "Long text"
+    : field.type==="datetime-local" ? "Date & time"
+    : field.type==="date" ? "Date"
+    : field.type==="number" ? "Number"
+    : field.type==="email" ? "Email"
+    : field.type==="tel" ? "Phone"
+    : field.type==="url" ? "URL"
+    : "Text";
+
+  const attrs=`class="input" disabled ${field.placeholder?`placeholder="${safeText(field.placeholder)}"`:""}`;
+  let control="";
+  if(field.type==="select"){
+    control=`<select ${attrs}>${(field.options||[]).map(o=>`<option>${safeText(o)}</option>`).join("")}</select>`;
+  }else if(field.type==="textarea"){
+    control=`<textarea ${attrs} rows="4" placeholder="${safeText(field.placeholder||"Enter details...")}"></textarea>`;
+  }else{
+    const inputType=["date","datetime-local","number","email","tel","url"].includes(field.type)?field.type:"text";
+    control=`<input type="${inputType}" ${attrs} />`;
+  }
+
+  return {
+    form:`<label class="${field.wide?"field-wide":""}">${safeText(field.label)}${field.required?" *":""}${control}${field.help?`<span class="field-help">${safeText(field.help)}</span>`:""}</label>`,
+    config:`<div class="owner-tool-config-row"><strong>${safeText(field.label)}</strong><span>${safeText(typeLabel+required)}</span></div>`
+  };
+}
+
+function openOwnerToolPreview(id){
+  const t=toolById(id);
+  if(!t)return;
+
+  $("ownerToolPreviewIcon").textContent=t.icon||"•";
+  $("ownerToolPreviewCategory").textContent=(t.category||"Other").toUpperCase();
+  $("ownerToolPreviewTitle").textContent=t.name||"Tool Preview";
+  $("ownerToolPreviewDescription").textContent=t.desc||"";
+  $("ownerToolPreviewHelper").textContent=t.helper||t.desc||"—";
+  $("ownerToolPreviewDueLabel").textContent=t.dueLabel||"Due Date";
+  $("ownerToolPreviewStatusCount").textContent=String((t.statuses||[]).length);
+  $("ownerToolPreviewFieldCount").textContent=String((t.fields||[]).length);
+  $("ownerPreviewToolName").value=t.name||"";
+
+  const rendered=(t.fields||[]).map(ownerPreviewFieldHtml);
+  $("ownerToolPreviewFields").innerHTML=rendered.map(x=>x.form).join("");
+  $("ownerToolConfigList").innerHTML=rendered.map(x=>x.config).join("");
+
+  $("ownerToolPreviewStatus").innerHTML=(t.statuses||["Open","In Progress","Complete","Archived"])
+    .map(s=>`<option>${safeText(s)}</option>`).join("");
+
+  $("ownerToolPreviewDueField").childNodes[0].nodeValue=`${t.dueLabel||"Due Date"} `;
+
+  $("ownerToolPreviewBullets").innerHTML=(t.bullets||[])
+    .map(item=>`<li>${safeText(item)}</li>`).join("");
+
+  $("ownerToolPreviewModal").classList.remove("hidden");
+}
+
+document.querySelectorAll("[data-close-owner-tool-preview]").forEach(btn=>{
+  btn.addEventListener("click",()=>$("ownerToolPreviewModal").classList.add("hidden"));
+});
+$("ownerToolPreviewModal").addEventListener("click",e=>{
+  if(e.target===$("ownerToolPreviewModal")) $("ownerToolPreviewModal").classList.add("hidden");
+});
 
 function ownerStatusClass(value=""){return String(value).toLowerCase().replaceAll(" ","_")}
 function renderOwnerBusinesses(){
