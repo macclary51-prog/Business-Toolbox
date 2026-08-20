@@ -589,7 +589,7 @@ document.querySelectorAll("[data-auth-tab]").forEach(btn=>btn.addEventListener("
 document.querySelectorAll("[data-close-modal]").forEach(btn=>btn.addEventListener("click",()=>authModal.classList.add("hidden")));
 authModal.addEventListener("click",e=>{if(e.target===authModal)authModal.classList.add("hidden")});
 
-let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[],businessEmployees=[];
+let currentUser=null,userProfile=null,business=null,records=[],currentPlatformAdmin=null,ownerBusinesses=[],businessEmployees=[],businessOrgUnits=[],businessRoles=[];
 
 function isBusinessOwnerAccount(){return userProfile?.role==="owner"}
 function isEmployeeAccount(){return userProfile?.role==="employee"}
@@ -599,6 +599,17 @@ function canEditRecords(){return isBusinessOwnerAccount()||employeePermissions()
 function canDeleteRecords(){return isBusinessOwnerAccount()||employeePermissions().canDeleteRecords===true}
 function canViewMonthly(){return isBusinessOwnerAccount()||employeePermissions().canViewMonthly===true}
 function canExportRecords(){return isBusinessOwnerAccount()||employeePermissions().canExportRecords===true}
+function canManageEmployees(){return isBusinessOwnerAccount()||employeePermissions().canManageEmployees===true}
+function canManageOrganization(){return isBusinessOwnerAccount()||employeePermissions().canManageOrganization===true}
+function canManageTools(){return isBusinessOwnerAccount()||employeePermissions().canManageTools===true}
+function canManageSettings(){return isBusinessOwnerAccount()||employeePermissions().canManageSettings===true}
+function hasManagementPermissions(profileOrPermissions){
+  const p=profileOrPermissions?.permissions||profileOrPermissions||{};
+  return p.canManageEmployees===true||p.canManageOrganization===true||p.canManageTools===true||p.canManageSettings===true;
+}
+function canManageEmployeeTarget(employee){
+  return isBusinessOwnerAccount()||!hasManagementPermissions(employee);
+}
 function fullBusinessEnabledModules(){return Array.isArray(business?.enabledModules)?business.enabledModules:defaultEnabledModules}
 function accessibleModules(){
   const businessModules=fullBusinessEnabledModules();
@@ -609,9 +620,13 @@ function accessibleModules(){
 function canAccessModule(moduleId){return accessibleModules().includes(moduleId)}
 function canAccessBusinessView(name){
   if(isBusinessOwnerAccount())return true;
-  if(name==="tools"||name==="employees"||name==="settings")return false;
-  if(name==="monthly"&&!canViewMonthly())return false;
-  return ["dashboard","monthly","records"].includes(name);
+  if(name==="tools")return canManageTools();
+  if(name==="employees")return canManageEmployees();
+  if(name==="organization")return canManageOrganization();
+  if(name==="roles")return false;
+  if(name==="settings")return canManageSettings();
+  if(name==="monthly")return canViewMonthly();
+  return ["dashboard","records"].includes(name);
 }
 
 $("signupForm").addEventListener("submit",async e=>{
@@ -650,12 +665,9 @@ onAuthStateChanged(auth,async user=>{
     const businessSnap=await getDoc(doc(db,"businesses",userProfile.businessId));
     if(!businessSnap.exists())throw new Error("Business record not found or access is suspended.");
     business={id:businessSnap.id,...businessSnap.data()};
-    if(userProfile.role==="owner"){
-      await Promise.all([loadRecords(),loadBusinessEmployees()]);
-    }else{
-      businessEmployees=[];
-      await loadRecords();
-    }
+    await Promise.all([loadRecords(),loadBusinessOrgUnits(),loadBusinessRoles()]);
+    if(canManageEmployees()||canManageOrganization())await loadBusinessEmployees();
+    else businessEmployees=[];
     showApp();
   }catch(error){console.error(error);alert("This account could not be loaded. Check account access and Firestore setup.");await signOut(auth);}
 });
@@ -664,21 +676,30 @@ function showApp(){
   publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");$("ownerPublicPreviewBar")?.classList.add("hidden");document.body.classList.remove("owner-previewing-public");appShell.classList.remove("hidden");
   $("sidebarBusinessName").textContent=business.name;
   $("sidebarUserEmail").textContent=currentUser.email||"";
-  $("sidebarUserRole").textContent=isBusinessOwnerAccount()?"Business Owner":`Employee${userProfile.jobTitle?` • ${userProfile.jobTitle}`:""}`;
+  $("sidebarUserRole").textContent=isBusinessOwnerAccount()
+    ?"Business Owner"
+    :(userProfile.roleName||userProfile.jobTitle||"Employee");
   $("settingsBusinessName").value=business.name||"";
   $("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";
+  $("settingsOwnerName").disabled=!isBusinessOwnerAccount();
   $("settingsPhone").value=business.phone||"";
   $("settingsWebsite").value=business.website||"";
   applyBusinessAccountRoleUI();
   renderModuleOptions();
   renderEverything();
-  if(isBusinessOwnerAccount())renderEmployeeAccounts();
+  if(canManageEmployees())renderEmployeeAccounts();
+  if(canManageOrganization())renderOrganization();
+  if(isBusinessOwnerAccount())renderRoles();
   switchView("dashboard");
 }
 function applyBusinessAccountRoleUI(){
   const owner=isBusinessOwnerAccount();
   document.querySelectorAll("[data-business-owner-only]").forEach(el=>el.classList.toggle("hidden",!owner));
-  document.querySelectorAll("[data-go-tools]").forEach(el=>el.classList.toggle("hidden",!owner));
+  document.querySelectorAll("[data-can-manage-employees]").forEach(el=>el.classList.toggle("hidden",!canManageEmployees()));
+  document.querySelectorAll("[data-can-manage-organization]").forEach(el=>el.classList.toggle("hidden",!canManageOrganization()));
+  document.querySelectorAll("[data-can-manage-tools]").forEach(el=>el.classList.toggle("hidden",!canManageTools()));
+  document.querySelectorAll("[data-can-manage-settings]").forEach(el=>el.classList.toggle("hidden",!canManageSettings()));
+  document.querySelectorAll("[data-go-tools]").forEach(el=>el.classList.toggle("hidden",!canManageTools()));
   $("monthlyNavBtn").classList.toggle("hidden",!canViewMonthly());
   $("quickAddBtn").classList.toggle("hidden",!canCreateRecords());
   $("addRecordBtn").classList.toggle("hidden",!canCreateRecords());
@@ -1579,8 +1600,245 @@ $("ownerRefreshBtn").addEventListener("click",async()=>{
 $("ownerLogoutBtn").addEventListener("click",()=>signOut(auth));
 
 
+
+async function loadBusinessOrgUnits(){
+  if(!business){businessOrgUnits=[];return;}
+  try{
+    const snap=await getDocs(collection(db,"businesses",business.id,"orgUnits"));
+    businessOrgUnits=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  }catch(error){
+    console.warn("Could not load organization groups.",error);
+    businessOrgUnits=[];
+  }
+}
+async function loadBusinessRoles(){
+  if(!business){businessRoles=[];return;}
+  try{
+    const snap=await getDocs(collection(db,"businesses",business.id,"roles"));
+    businessRoles=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  }catch(error){
+    console.warn("Could not load role templates.",error);
+    businessRoles=[];
+  }
+}
+function orgUnitById(id){return businessOrgUnits.find(x=>x.id===id)}
+function roleById(id){return businessRoles.find(x=>x.id===id)}
+function employeeOrgUnits(employee){
+  const ids=Array.isArray(employee?.orgUnitIds)?employee.orgUnitIds:[];
+  return ids.map(orgUnitById).filter(Boolean);
+}
+function orgEmployeeCount(orgId){
+  return businessEmployees.filter(e=>Array.isArray(e.orgUnitIds)&&e.orgUnitIds.includes(orgId)).length;
+}
+function orgDescendantIds(id){
+  const result=new Set();
+  const visit=parent=>{
+    businessOrgUnits.filter(x=>x.parentId===parent).forEach(child=>{
+      if(!result.has(child.id)){result.add(child.id);visit(child.id)}
+    });
+  };
+  visit(id);
+  return result;
+}
+function renderOrganization(){
+  if(!$("orgTree")||!canManageOrganization())return;
+  const q=$("orgSearch").value.trim().toLowerCase();
+  const assigned=new Set(businessEmployees.flatMap(e=>Array.isArray(e.orgUnitIds)?e.orgUnitIds:[]));
+  $("orgStatTotal").textContent=businessOrgUnits.length;
+  $("orgStatTopLevel").textContent=businessOrgUnits.filter(x=>!x.parentId).length;
+  $("orgStatNested").textContent=businessOrgUnits.filter(x=>x.parentId).length;
+  $("orgStatAssigned").textContent=businessEmployees.filter(e=>(e.orgUnitIds||[]).length).length;
+  $("orgResultCount").textContent=`${businessOrgUnits.length} group${businessOrgUnits.length===1?"":"s"}`;
+
+  if(!businessOrgUnits.length){
+    $("orgTree").innerHTML='<div class="empty-state">No structure yet — and that is completely valid. Add a group only when the business needs one.</div>';
+    return;
+  }
+
+  const matches=id=>{
+    const u=orgUnitById(id); if(!u)return false;
+    const self=`${u.name||""} ${u.type||""} ${u.description||""}`.toLowerCase().includes(q);
+    return !q||self||businessOrgUnits.filter(x=>x.parentId===id).some(c=>matches(c.id));
+  };
+  const nodeHtml=(unit,depth=0)=>{
+    if(!matches(unit.id))return "";
+    const children=businessOrgUnits.filter(x=>x.parentId===unit.id);
+    const count=orgEmployeeCount(unit.id);
+    return `<div class="org-node">
+      <div class="org-node-row">
+        <div class="org-node-main">
+          <span class="org-depth-mark">${depth===0?"●":"↳"}</span>
+          <div>
+            <strong>${safeText(unit.name||"Unnamed Group")}</strong>
+            <span>${safeText(unit.type||"Custom")}${unit.description?` • ${safeText(unit.description)}`:""}</span>
+            <span class="org-employee-count">${count} assigned employee${count===1?"":"s"}</span>
+          </div>
+        </div>
+        <div class="org-node-actions">
+          <button class="mini-btn" data-edit-org="${unit.id}">Edit</button>
+          <button class="mini-btn danger" data-delete-org="${unit.id}">Delete</button>
+        </div>
+      </div>
+      ${children.length?`<div class="org-node-children">${children.map(c=>nodeHtml(c,depth+1)).join("")}</div>`:""}
+    </div>`;
+  };
+
+  const roots=businessOrgUnits.filter(x=>!x.parentId||!orgUnitById(x.parentId));
+  $("orgTree").innerHTML=roots.map(r=>nodeHtml(r,0)).join("")||'<div class="empty-state">No groups match your search.</div>';
+  document.querySelectorAll("[data-edit-org]").forEach(btn=>btn.onclick=()=>openOrgUnitModal(orgUnitById(btn.dataset.editOrg)));
+  document.querySelectorAll("[data-delete-org]").forEach(btn=>btn.onclick=()=>deleteOrgUnit(btn.dataset.deleteOrg));
+}
+function populateOrgParentOptions(currentId=""){
+  const blocked=new Set(currentId?[currentId,...orgDescendantIds(currentId)]:[]);
+  $("orgUnitParent").innerHTML=`<option value="">No parent — top level</option>${businessOrgUnits
+    .filter(x=>!blocked.has(x.id))
+    .map(x=>`<option value="${x.id}">${safeText(x.name)} (${safeText(x.type||"Custom")})</option>`).join("")}`;
+}
+function openOrgUnitModal(unit=null){
+  if(!canManageOrganization())return;
+  $("orgUnitForm").reset();$("orgUnitMessage").textContent="";
+  $("orgUnitId").value=unit?.id||"";
+  $("orgUnitName").value=unit?.name||"";
+  const knownTypes=["Team","Department","Location","Crew","Division","Project","Office","Warehouse","Branch"];
+  const custom=unit?.type&&!knownTypes.includes(unit.type);
+  $("orgUnitType").value=custom?"Custom":(unit?.type||"Team");
+  $("orgUnitCustomType").value=custom?unit.type:"";
+  $("orgUnitCustomTypeLabel").classList.toggle("hidden",$("orgUnitType").value!=="Custom");
+  populateOrgParentOptions(unit?.id||"");
+  $("orgUnitParent").value=unit?.parentId||"";
+  $("orgUnitDescription").value=unit?.description||"";
+  $("orgUnitModalTitle").textContent=unit?"Edit Group":"Add Group";
+  $("orgUnitSaveBtn").textContent=unit?"Save Changes":"Create Group";
+  $("orgUnitModal").classList.remove("hidden");
+}
+async function deleteOrgUnit(id){
+  if(!canManageOrganization())return;
+  const unit=orgUnitById(id); if(!unit)return;
+  if(!confirm(`Delete "${unit.name}"? Employees will simply become unassigned from this group, and child groups will move to the top level.`))return;
+  const childUpdates=businessOrgUnits.filter(x=>x.parentId===id).map(x=>
+    updateDoc(doc(db,"businesses",business.id,"orgUnits",x.id),{parentId:"",updatedAt:serverTimestamp(),updatedBy:currentUser.uid})
+  );
+  const employeeUpdates=businessEmployees.filter(e=>(e.orgUnitIds||[]).includes(id)).map(e=>
+    updateDoc(doc(db,"users",e.id),{orgUnitIds:e.orgUnitIds.filter(x=>x!==id),updatedAt:serverTimestamp(),updatedBy:currentUser.uid})
+  );
+  await Promise.all([...childUpdates,...employeeUpdates]);
+  await deleteDoc(doc(db,"businesses",business.id,"orgUnits",id));
+  await Promise.all([loadBusinessOrgUnits(),(canManageEmployees()||canManageOrganization())?loadBusinessEmployees():Promise.resolve()]);
+  renderOrganization();if(canManageEmployees())renderEmployeeAccounts();
+}
+$("orgSearch").addEventListener("input",renderOrganization);
+$("addOrgUnitBtn").addEventListener("click",()=>openOrgUnitModal());
+$("orgUnitType").addEventListener("change",()=>$("orgUnitCustomTypeLabel").classList.toggle("hidden",$("orgUnitType").value!=="Custom"));
+document.querySelectorAll("[data-close-org-unit]").forEach(btn=>btn.addEventListener("click",()=>$("orgUnitModal").classList.add("hidden")));
+$("orgUnitModal").addEventListener("click",e=>{if(e.target===$("orgUnitModal"))$("orgUnitModal").classList.add("hidden")});
+$("orgUnitForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!canManageOrganization())return;
+  const id=$("orgUnitId").value;
+  const type=$("orgUnitType").value==="Custom"?$("orgUnitCustomType").value.trim():$("orgUnitType").value;
+  if(!type){$("orgUnitMessage").textContent="Enter a custom group type.";return;}
+  const payload={
+    name:$("orgUnitName").value.trim(),type,parentId:$("orgUnitParent").value||"",
+    description:$("orgUnitDescription").value.trim(),active:true,
+    updatedAt:serverTimestamp(),updatedBy:currentUser.uid
+  };
+  if(id)await updateDoc(doc(db,"businesses",business.id,"orgUnits",id),payload);
+  else await addDoc(collection(db,"businesses",business.id,"orgUnits"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});
+  await loadBusinessOrgUnits();renderOrganization();$("orgUnitModal").classList.add("hidden");
+});
+
+function rolePermissions(role){return role?.permissions||{}}
+function roleHasAdmin(role){return hasManagementPermissions(rolePermissions(role))}
+function roleAssignedCount(id){return businessEmployees.filter(e=>e.roleId===id).length}
+function renderRoles(){
+  if(!$("roleTemplateGrid")||!isBusinessOwnerAccount())return;
+  const q=$("roleSearch").value.trim().toLowerCase();
+  const filtered=businessRoles.filter(r=>!q||`${r.name||""} ${r.description||""}`.toLowerCase().includes(q));
+  $("roleStatTotal").textContent=businessRoles.length;
+  $("roleStatAssigned").textContent=businessEmployees.filter(e=>e.roleId).length;
+  $("roleStatAdmin").textContent=businessRoles.filter(roleHasAdmin).length;
+  $("roleStatStandard").textContent=businessRoles.filter(r=>!roleHasAdmin(r)).length;
+  $("roleResultCount").textContent=`${filtered.length} role${filtered.length===1?"":"s"}`;
+  $("roleTemplateGrid").innerHTML=filtered.length?filtered.map(role=>{
+    const p=rolePermissions(role),tools=Array.isArray(p.allowedModules)?p.allowedModules:[];
+    const badges=[
+      p.canCreateRecords&&"Create",p.canEditRecords&&"Edit",p.canDeleteRecords&&"Delete",
+      p.canViewMonthly&&"Monthly",p.canExportRecords&&"Export"
+    ].filter(Boolean);
+    const admin=[
+      p.canManageEmployees&&"Employees",p.canManageOrganization&&"Organization",
+      p.canManageTools&&"Tools",p.canManageSettings&&"Settings"
+    ].filter(Boolean);
+    return `<article class="role-card">
+      <div class="role-card-head"><div><h4>${safeText(role.name||"Unnamed Role")}</h4><p>${safeText(role.description||"No description")}</p></div><span class="owner-status ${roleHasAdmin(role)?"active":"setup_required"}">${roleHasAdmin(role)?"Admin-capable":"Standard"}</span></div>
+      <div class="role-badges">${badges.map(x=>`<span class="role-badge">${safeText(x)}</span>`).join("")}${admin.map(x=>`<span class="role-badge admin">Manage ${safeText(x)}</span>`).join("")}</div>
+      <p>${tools.length} default tool${tools.length===1?"":"s"} • ${roleAssignedCount(role.id)} assigned employee${roleAssignedCount(role.id)===1?"":"s"}</p>
+      <div class="role-card-actions"><button class="mini-btn" data-edit-role="${role.id}">Edit Template</button><button class="mini-btn danger" data-delete-role="${role.id}">Delete</button></div>
+    </article>`;
+  }).join(""):'<div class="empty-state">No role templates yet. Employees can still be configured individually without roles.</div>';
+  document.querySelectorAll("[data-edit-role]").forEach(btn=>btn.onclick=()=>openRoleModal(roleById(btn.dataset.editRole)));
+  document.querySelectorAll("[data-delete-role]").forEach(btn=>btn.onclick=()=>deleteRole(btn.dataset.deleteRole));
+}
+function renderRoleToolAccess(selected=[]){
+  const selectedSet=new Set(selected);
+  $("roleToolAccessGrid").innerHTML=toolDefinitions.filter(t=>fullBusinessEnabledModules().includes(t.id)).map(t=>`
+    <label class="employee-tool-access"><input type="checkbox" data-role-tool="${t.id}" ${selectedSet.has(t.id)?"checked":""}/><span>${safeText(t.icon)} ${safeText(t.name)}</span></label>
+  `).join("")||'<div class="empty-state">Enable business tools before creating tool-based role defaults.</div>';
+}
+function selectedRoleTools(){return [...document.querySelectorAll("[data-role-tool]:checked")].map(x=>x.dataset.roleTool)}
+function openRoleModal(role=null){
+  if(!isBusinessOwnerAccount())return;
+  $("roleForm").reset();$("roleMessage").textContent="";
+  $("roleId").value=role?.id||"";$("roleName").value=role?.name||"";$("roleDescription").value=role?.description||"";
+  const p=rolePermissions(role);
+  $("roleCanCreate").checked=role?p.canCreateRecords===true:true;
+  $("roleCanEdit").checked=role?p.canEditRecords===true:true;
+  $("roleCanDelete").checked=role?p.canDeleteRecords===true:false;
+  $("roleCanMonthly").checked=role?p.canViewMonthly===true:true;
+  $("roleCanExport").checked=role?p.canExportRecords===true:false;
+  $("roleCanManageEmployees").checked=role?p.canManageEmployees===true:false;
+  $("roleCanManageOrganization").checked=role?p.canManageOrganization===true:false;
+  $("roleCanManageTools").checked=role?p.canManageTools===true:false;
+  $("roleCanManageSettings").checked=role?p.canManageSettings===true:false;
+  renderRoleToolAccess(role?(p.allowedModules||[]):fullBusinessEnabledModules());
+  $("roleModalTitle").textContent=role?"Edit Role":"Create Role";$("roleSaveBtn").textContent=role?"Save Template":"Create Role";
+  $("roleModal").classList.remove("hidden");
+}
+async function deleteRole(id){
+  if(!isBusinessOwnerAccount())return;
+  const role=roleById(id);if(!role)return;
+  if(!confirm(`Delete role template "${role.name}"? Employees keep their current permissions; only the role label/template assignment is removed.`))return;
+  const updates=businessEmployees.filter(e=>e.roleId===id).map(e=>updateDoc(doc(db,"users",e.id),{roleId:"",roleName:"",updatedAt:serverTimestamp(),updatedBy:currentUser.uid}));
+  await Promise.all(updates);
+  await deleteDoc(doc(db,"businesses",business.id,"roles",id));
+  await Promise.all([loadBusinessRoles(),loadBusinessEmployees()]);
+  renderRoles();renderEmployeeAccounts();
+}
+$("roleSearch").addEventListener("input",renderRoles);
+$("addRoleBtn").addEventListener("click",()=>openRoleModal());
+$("roleSelectAllTools").addEventListener("click",()=>document.querySelectorAll("[data-role-tool]").forEach(cb=>cb.checked=true));
+$("roleClearTools").addEventListener("click",()=>document.querySelectorAll("[data-role-tool]").forEach(cb=>cb.checked=false));
+document.querySelectorAll("[data-close-role]").forEach(btn=>btn.addEventListener("click",()=>$("roleModal").classList.add("hidden")));
+$("roleModal").addEventListener("click",e=>{if(e.target===$("roleModal"))$("roleModal").classList.add("hidden")});
+$("roleForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!isBusinessOwnerAccount())return;
+  const id=$("roleId").value;
+  const permissions={
+    canCreateRecords:$("roleCanCreate").checked,canEditRecords:$("roleCanEdit").checked,
+    canDeleteRecords:$("roleCanDelete").checked,canViewMonthly:$("roleCanMonthly").checked,
+    canExportRecords:$("roleCanExport").checked,canManageEmployees:$("roleCanManageEmployees").checked,
+    canManageOrganization:$("roleCanManageOrganization").checked,canManageTools:$("roleCanManageTools").checked,
+    canManageSettings:$("roleCanManageSettings").checked,allowedModules:selectedRoleTools()
+  };
+  const payload={name:$("roleName").value.trim(),description:$("roleDescription").value.trim(),permissions,updatedAt:serverTimestamp(),updatedBy:currentUser.uid};
+  if(id)await updateDoc(doc(db,"businesses",business.id,"roles",id),payload);
+  else await addDoc(collection(db,"businesses",business.id,"roles"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});
+  await loadBusinessRoles();renderRoles();$("roleModal").classList.add("hidden");
+});
+
 async function loadBusinessEmployees(){
-  if(!isBusinessOwnerAccount()||!business){businessEmployees=[];return;}
+  if(!(canManageEmployees()||canManageOrganization())||!business){businessEmployees=[];return;}
   const snap=await getDocs(query(collection(db,"users"),where("businessId","==",business.id)));
   businessEmployees=snap.docs
     .map(d=>({id:d.id,...d.data()}))
@@ -1609,10 +1867,14 @@ function employeePermissionLabels(employee){
   if(p.canDeleteRecords)labels.push("Delete");
   if(p.canViewMonthly)labels.push("Monthly");
   if(p.canExportRecords)labels.push("Export");
+  if(p.canManageEmployees)labels.push("Manage Employees");
+  if(p.canManageOrganization)labels.push("Manage Org");
+  if(p.canManageTools)labels.push("Manage Tools");
+  if(p.canManageSettings)labels.push("Manage Settings");
   return labels;
 }
 function renderEmployeeAccounts(){
-  if(!isBusinessOwnerAccount()||!$("employeeAccountList"))return;
+  if(!canManageEmployees()||!$("employeeAccountList"))return;
   renderEmployeeStats();
   const q=$("employeeSearch").value.trim().toLowerCase();
   const filtered=businessEmployees.filter(e=>!q||`${e.displayName||""} ${e.email||""} ${e.jobTitle||""}`.toLowerCase().includes(q));
@@ -1633,12 +1895,17 @@ function renderEmployeeAccounts(){
       <div class="employee-account-meta">
         <strong>${tools.length} Allowed Tool${tools.length===1?"":"s"}</strong>
         <span>${tools.length?tools.slice(0,4).map(id=>toolById(id).name).join(", "):"No tool access"}${tools.length>4?` +${tools.length-4} more`:""}</span>
+        <div class="employee-role-line">
+          ${e.roleName?`<span class="employee-role-chip">${safeText(e.roleName)}</span>`:""}
+          ${employeeOrgUnits(e).slice(0,3).map(u=>`<span class="employee-org-chip">${safeText(u.name)}</span>`).join("")}
+          ${employeeOrgUnits(e).length>3?`<span class="employee-org-chip">+${employeeOrgUnits(e).length-3}</span>`:""}
+        </div>
         <div class="employee-permission-chips">${permissions.map(p=>`<span class="employee-permission-chip">${safeText(p)}</span>`).join("")||'<span class="employee-permission-chip">View only</span>'}</div>
       </div>
       <div class="employee-account-actions">
-        <button class="mini-btn" data-edit-employee="${e.id}">Edit Access</button>
+        ${canManageEmployeeTarget(e)?`<button class="mini-btn" data-edit-employee="${e.id}">Edit Access</button>
         <button class="mini-btn" data-reset-employee="${e.id}">Reset Password</button>
-        <button class="mini-btn ${e.active===true?"danger":""}" data-toggle-employee="${e.id}" data-next-active="${e.active===true?"false":"true"}">${e.active===true?"Deactivate":"Reactivate"}</button>
+        <button class="mini-btn ${e.active===true?"danger":""}" data-toggle-employee="${e.id}" data-next-active="${e.active===true?"false":"true"}">${e.active===true?"Deactivate":"Reactivate"}</button>`:'<span class="owner-status active">Owner-managed admin</span>'}
       </div>
     </div>`;
   }).join(""):'<div class="empty-state">No employee accounts match this search.</div>';
@@ -1656,8 +1923,47 @@ function renderEmployeeAccounts(){
     renderEmployeeAccounts();
   });
 }
+
+function assignableRoles(){
+  return isBusinessOwnerAccount()?businessRoles:businessRoles.filter(r=>!roleHasAdmin(r));
+}
+function assignableTools(){
+  return isBusinessOwnerAccount()?fullBusinessEnabledModules():accessibleModules();
+}
+function renderEmployeeRoleOptions(selectedId=""){
+  const roles=assignableRoles();
+  $("employeeRoleTemplate").innerHTML=`<option value="">No role template — customize manually</option>${roles.map(r=>`<option value="${r.id}">${safeText(r.name)}</option>`).join("")}`;
+  $("employeeRoleTemplate").value=roles.some(r=>r.id===selectedId)?selectedId:"";
+}
+function renderEmployeeOrgAccess(selected=[]){
+  const selectedSet=new Set(selected);
+  $("employeeOrgAccessGrid").innerHTML=businessOrgUnits.length?businessOrgUnits.map(u=>`
+    <label class="employee-org-access">
+      <input type="checkbox" data-employee-org="${u.id}" ${selectedSet.has(u.id)?"checked":""}/>
+      <span><strong>${safeText(u.name)}</strong><small>${safeText(u.type||"Custom")}${u.parentId&&orgUnitById(u.parentId)?` • inside ${safeText(orgUnitById(u.parentId).name)}`:""}</small></span>
+    </label>`).join(""):'<div class="empty-state">No organization groups exist. This employee can remain ungrouped.</div>';
+}
+function selectedEmployeeOrgUnits(){return [...document.querySelectorAll("[data-employee-org]:checked")].map(x=>x.dataset.employeeOrg)}
+function applyRoleTemplateToEmployee(roleId){
+  const role=roleById(roleId);if(!role)return;
+  const p=rolePermissions(role);
+  $("employeeCanCreate").checked=p.canCreateRecords===true;
+  $("employeeCanEdit").checked=p.canEditRecords===true;
+  $("employeeCanDelete").checked=p.canDeleteRecords===true;
+  $("employeeCanMonthly").checked=p.canViewMonthly===true;
+  $("employeeCanExport").checked=p.canExportRecords===true;
+  if(isBusinessOwnerAccount()){
+    $("employeeCanManageEmployees").checked=p.canManageEmployees===true;
+    $("employeeCanManageOrganization").checked=p.canManageOrganization===true;
+    $("employeeCanManageTools").checked=p.canManageTools===true;
+    $("employeeCanManageSettings").checked=p.canManageSettings===true;
+  }
+  renderEmployeeToolAccess((p.allowedModules||[]).filter(id=>assignableTools().includes(id)));
+}
+$("employeeRoleTemplate").addEventListener("change",()=>{if($("employeeRoleTemplate").value)applyRoleTemplateToEmployee($("employeeRoleTemplate").value)});
+
 function renderEmployeeToolAccess(selected=[]){
-  const enabled=fullBusinessEnabledModules();
+  const enabled=assignableTools();
   const selectedSet=new Set(selected);
   $("employeeToolAccessGrid").innerHTML=toolDefinitions.filter(t=>enabled.includes(t.id)).map(t=>`
     <label class="employee-tool-access">
@@ -1669,7 +1975,8 @@ function selectedEmployeeTools(){
   return [...document.querySelectorAll("[data-employee-tool]:checked")].map(el=>el.dataset.employeeTool);
 }
 function openEmployeeModal(employee=null){
-  if(!isBusinessOwnerAccount())return;
+  if(!canManageEmployees())return;
+  if(employee&&!canManageEmployeeTarget(employee)){alert("Only the business owner can edit management-level employee accounts.");return;}
   $("employeeForm").reset();
   $("employeeMessage").textContent="";
   $("employeeUid").value=employee?.id||"";
@@ -1683,8 +1990,8 @@ function openEmployeeModal(employee=null){
   $("employeeResetPasswordBtn").classList.toggle("hidden",!employee);
   $("employeeModalTitle").textContent=employee?"Edit Employee Access":"Add Employee";
   $("employeeModalHelper").textContent=employee
-    ?"Change this employee's business permissions and tool access."
-    :"Create a login for this business. The business owner stays signed in while the employee account is created.";
+    ?"Change this employee's role template, optional group membership, individual permissions and tool access."
+    :"Create a login. Roles and organization groups are optional, so this works for a flat startup or a larger structured business.";
   $("employeeSaveBtn").textContent=employee?"Save Employee Access":"Create Employee";
 
   const p=employee?.permissions||{};
@@ -1693,7 +2000,15 @@ function openEmployeeModal(employee=null){
   $("employeeCanDelete").checked=employee?p.canDeleteRecords===true:false;
   $("employeeCanMonthly").checked=employee?p.canViewMonthly===true:true;
   $("employeeCanExport").checked=employee?p.canExportRecords===true:false;
-  renderEmployeeToolAccess(employee?employeeAllowedTools(employee):fullBusinessEnabledModules());
+  $("employeeCanManageEmployees").checked=employee?p.canManageEmployees===true:false;
+  $("employeeCanManageOrganization").checked=employee?p.canManageOrganization===true:false;
+  $("employeeCanManageTools").checked=employee?p.canManageTools===true:false;
+  $("employeeCanManageSettings").checked=employee?p.canManageSettings===true:false;
+  $("employeeAdminPermissions").classList.toggle("hidden",!isBusinessOwnerAccount());
+
+  renderEmployeeRoleOptions(employee?.roleId||"");
+  renderEmployeeOrgAccess(employee?.orgUnitIds||[]);
+  renderEmployeeToolAccess(employee?employeeAllowedTools(employee):assignableTools());
   $("employeeModal").classList.remove("hidden");
 }
 async function sendEmployeePasswordReset(employee){
@@ -1707,7 +2022,7 @@ async function sendEmployeePasswordReset(employee){
   }
 }
 $("employeeSearch").addEventListener("input",renderEmployeeAccounts);
-$("addEmployeeBtn").addEventListener("click",()=>openEmployeeModal());
+$("addEmployeeBtn").addEventListener("click",()=>{if(canManageEmployees())openEmployeeModal()});
 document.querySelectorAll("[data-close-employee]").forEach(btn=>btn.addEventListener("click",()=>$("employeeModal").classList.add("hidden")));
 $("employeeModal").addEventListener("click",e=>{if(e.target===$("employeeModal"))$("employeeModal").classList.add("hidden")});
 $("employeeSelectAllTools").addEventListener("click",()=>document.querySelectorAll("[data-employee-tool]").forEach(cb=>cb.checked=true));
@@ -1718,26 +2033,37 @@ $("employeeResetPasswordBtn").addEventListener("click",()=>{
 });
 $("employeeForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  if(!isBusinessOwnerAccount())return;
+  if(!canManageEmployees())return;
   const id=$("employeeUid").value;
+  const existing=businessEmployees.find(x=>x.id===id);
+  if(existing&&!canManageEmployeeTarget(existing)){alert("Only the business owner can edit that account.");return;}
   const displayName=$("employeeName").value.trim();
   const jobTitle=$("employeeJobTitle").value.trim();
   const email=$("employeeEmail").value.trim().toLowerCase();
+  const roleId=$("employeeRoleTemplate").value||"";
+  const role=roleById(roleId);
+  const owner=isBusinessOwnerAccount();
   const permissions={
     canCreateRecords:$("employeeCanCreate").checked,
     canEditRecords:$("employeeCanEdit").checked,
     canDeleteRecords:$("employeeCanDelete").checked,
     canViewMonthly:$("employeeCanMonthly").checked,
     canExportRecords:$("employeeCanExport").checked,
-    allowedModules:selectedEmployeeTools()
+    canManageEmployees:owner?$("employeeCanManageEmployees").checked:false,
+    canManageOrganization:owner?$("employeeCanManageOrganization").checked:false,
+    canManageTools:owner?$("employeeCanManageTools").checked:false,
+    canManageSettings:owner?$("employeeCanManageSettings").checked:false,
+    allowedModules:selectedEmployeeTools().filter(moduleId=>assignableTools().includes(moduleId))
   };
+  const orgUnitIds=selectedEmployeeOrgUnits().filter(id=>businessOrgUnits.some(u=>u.id===id));
   $("employeeMessage").className="form-message";
   $("employeeMessage").textContent=id?"Saving employee access...":"Creating employee login...";
 
   try{
     if(id){
       await updateDoc(doc(db,"users",id),{
-        displayName,jobTitle,permissions,updatedAt:serverTimestamp(),updatedBy:currentUser.uid
+        displayName,jobTitle,roleId,roleName:role?.name||"",orgUnitIds,permissions,
+        updatedAt:serverTimestamp(),updatedBy:currentUser.uid
       });
     }else{
       const password=$("employeePassword").value;
@@ -1747,7 +2073,8 @@ $("employeeForm").addEventListener("submit",async e=>{
         credential=await createUserWithEmailAndPassword(employeeCreatorAuth,email,password);
         await updateProfile(credential.user,{displayName});
         await setDoc(doc(db,"users",credential.user.uid),{
-          displayName,email,jobTitle,businessId:business.id,role:"employee",active:true,permissions,
+          displayName,email,jobTitle,roleId,roleName:role?.name||"",orgUnitIds,
+          businessId:business.id,role:"employee",active:true,permissions,
           createdBy:currentUser.uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),updatedBy:currentUser.uid
         });
       }catch(error){
@@ -1759,6 +2086,8 @@ $("employeeForm").addEventListener("submit",async e=>{
     }
     await loadBusinessEmployees();
     renderEmployeeAccounts();
+    renderOrganization();
+    renderRoles();
     $("employeeModal").classList.add("hidden");
   }catch(error){
     console.error(error);
@@ -1963,7 +2292,7 @@ function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.get
 function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,12).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{switchView("records");$("recordModuleFilter").value=btn.dataset.toolOpen;renderRecords();});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
 function renderModuleSettings(){
-  if(!isBusinessOwnerAccount()){$("moduleSettingsGrid").innerHTML="";return;}
+  if(!canManageTools()){$("moduleSettingsGrid").innerHTML="";return;}
   const enabled=new Set(fullBusinessEnabledModules());
   $("moduleSettingsGrid").innerHTML=toolDefinitions.map(t=>`<div class="module-setting"><div><strong>${safeText(t.icon)} ${safeText(t.name)}</strong><small>${enabled.has(t.id)?"Enabled":"Disabled"}</small></div><button class="toggle ${enabled.has(t.id)?"on":""}" data-module-toggle="${t.id}" aria-label="Toggle ${safeText(t.name)}"></button></div>`).join("");
   document.querySelectorAll("[data-module-toggle]").forEach(btn=>btn.onclick=async()=>{
@@ -1971,7 +2300,9 @@ function renderModuleSettings(){
     next.has(id)?next.delete(id):next.add(id);
     business.enabledModules=[...next];
     await updateDoc(doc(db,"businesses",business.id),{enabledModules:business.enabledModules,updatedAt:serverTimestamp()});
-    renderModuleOptions();renderEverything();renderEmployeeAccounts();
+    renderModuleOptions();renderEverything();
+    if(canManageEmployees())renderEmployeeAccounts();
+    if(isBusinessOwnerAccount())renderRoles();
   });
 }
 
@@ -2516,9 +2847,21 @@ $("recordForm").addEventListener("submit",async e=>{
   try{if(id)await updateDoc(doc(db,"businesses",business.id,"records",id),payload);else await addDoc(collection(db,"businesses",business.id,"records"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});await loadRecords();renderEverything();recordModal.classList.add("hidden");}catch(error){console.error(error);$("recordMessage").textContent="Could not save this item. Check Firestore rules.";}
 });
 
-$("businessSettingsForm").addEventListener("submit",async e=>{e.preventDefault();if(!isBusinessOwnerAccount()){alert("Only the business owner can change business settings.");return;}const updates={name:$("settingsBusinessName").value.trim(),ownerName:$("settingsOwnerName").value.trim(),phone:$("settingsPhone").value.trim(),website:$("settingsWebsite").value.trim(),updatedAt:serverTimestamp()};await updateDoc(doc(db,"businesses",business.id),updates);Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");});
+$("businessSettingsForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!canManageSettings()){alert("Your account cannot change business settings.");return;}
+  const updates={
+    name:$("settingsBusinessName").value.trim(),
+    phone:$("settingsPhone").value.trim(),
+    website:$("settingsWebsite").value.trim(),
+    updatedAt:serverTimestamp()
+  };
+  if(isBusinessOwnerAccount())updates.ownerName=$("settingsOwnerName").value.trim();
+  await updateDoc(doc(db,"businesses",business.id),updates);
+  Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");
+});
 if($("monthlyPicker")){$("monthlyPicker").value=monthKeyFromDate(new Date());$("monthlyPicker").addEventListener("change",renderMonthlyOverview);$("monthlyPrevBtn").addEventListener("click",()=>shiftMonth(-1));$("monthlyNextBtn").addEventListener("click",()=>shiftMonth(1));}
-const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
+const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],organization:[$("organizationView"),"FREEDOM STRUCTURE","Organization"],roles:[$("rolesView"),"ACCESS TEMPLATES","Roles & Access"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
 function switchView(name){
   if(!views[name])return;
   if(!canAccessBusinessView(name)){name="dashboard";}
@@ -2526,7 +2869,9 @@ function switchView(name){
   document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));
   $("viewEyebrow").textContent=views[name][1];
   $("viewTitle").textContent=views[name][2];
-  if(name==="employees"&&isBusinessOwnerAccount())renderEmployeeAccounts();
+  if(name==="employees"&&canManageEmployees())renderEmployeeAccounts();
+  if(name==="organization"&&canManageOrganization())renderOrganization();
+  if(name==="roles"&&isBusinessOwnerAccount())renderRoles();
   if(window.innerWidth<=780)$("sidebar").classList.remove("open");
 }
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>switchView(btn.dataset.view)));document.querySelectorAll("[data-go-tools]").forEach(btn=>btn.addEventListener("click",()=>switchView("tools")));$("sidebarToggle").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
