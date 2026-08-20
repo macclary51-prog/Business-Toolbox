@@ -128,10 +128,12 @@
       <nav class="sidebar-nav">
         <button class="side-link active" data-view="dashboard"><span>⌂</span> Dashboard</button>
         <button class="side-link" data-view="monthly" id="monthlyNavBtn"><span>◫</span> Monthly Overview</button>
-        <button class="side-link" data-view="tools" data-business-owner-only><span>▦</span> Tools</button>
+        <button class="side-link" data-view="tools" data-can-manage-tools><span>▦</span> Tools</button>
         <button class="side-link" data-view="records"><span>☰</span> All Records</button>
-        <button class="side-link" data-view="employees" data-business-owner-only><span>♙</span> Employee Accounts</button>
-        <button class="side-link" data-view="settings" data-business-owner-only><span>⚙</span> Settings</button>
+        <button class="side-link" data-view="employees" data-can-manage-employees><span>♙</span> Employee Accounts</button>
+        <button class="side-link" data-view="organization" data-can-manage-organization><span>⌘</span> Organization</button>
+        <button class="side-link" data-view="roles" data-business-owner-only><span>◆</span> Roles & Access</button>
+        <button class="side-link" data-view="settings" data-can-manage-settings><span>⚙</span> Settings</button>
       </nav>
       <button class="btn btn-ghost sidebar-logout" id="logoutBtn">Log Out</button>
     </aside>
@@ -203,7 +205,7 @@
           </div>
           <article class="panel monthly-records-panel"><div class="panel-heading"><div><small>MONTH RECORDS</small><h3 id="monthlyRecordTitle">Records</h3></div></div><div class="record-list" id="monthlyRecords"></div></article>
         </section>
-        <section class="app-view hidden" id="toolsView"><article class="panel"><div class="panel-heading"><div><small>MODULES</small><h3>Choose Your Business Tools</h3></div></div><p class="panel-copy">Turn tools on or off. Disabled tools stay out of your dashboard without deleting their records.</p><div class="module-settings-grid" id="moduleSettingsGrid"></div></article></section>
+        <section class="app-view hidden" id="toolsView" data-can-manage-tools><article class="panel"><div class="panel-heading"><div><small>MODULES</small><h3>Choose Your Business Tools</h3></div></div><p class="panel-copy">Turn tools on or off. Disabled tools stay out of your dashboard without deleting their records.</p><div class="module-settings-grid" id="moduleSettingsGrid"></div></article></section>
         <section class="app-view hidden" id="recordsView">
           <article class="panel">
             <div class="records-toolbar records-toolbar-advanced">
@@ -226,7 +228,7 @@
             <div class="record-list" id="allRecords"></div>
           </article>
         </section>
-        <section class="app-view hidden" id="employeesView" data-business-owner-only>
+        <section class="app-view hidden" id="employeesView" data-can-manage-employees>
           <div class="employee-page-heading">
             <div>
               <small>TEAM ACCESS</small>
@@ -252,12 +254,90 @@
               </div>
               <input class="input owner-search" id="employeeSearch" type="search" placeholder="Search name, email or job title..." />
             </div>
+            <div class="freedom-note"><strong>Freedom Structure:</strong> roles, teams, departments and locations are optional. A one-person startup can stay completely flat, while a larger company can organize employees however it wants.</div>
             <p class="panel-copy">Employees use the same public Login screen as the business owner. Deactivating an employee immediately blocks their Firestore access.</p>
             <div class="employee-account-list" id="employeeAccountList"></div>
           </article>
         </section>
 
-        <section class="app-view hidden" id="settingsView"><article class="panel settings-panel"><div class="panel-heading"><div><small>BUSINESS</small><h3>Business Settings</h3></div></div><form id="businessSettingsForm" class="form-grid"><label>Business Name<input class="input" id="settingsBusinessName" required /></label><label>Owner Name<input class="input" id="settingsOwnerName" /></label><label>Business Phone<input class="input" id="settingsPhone" type="tel" /></label><label>Business Website<input class="input" id="settingsWebsite" type="url" placeholder="https://" /></label><div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div></form></article></section>
+        <section class="app-view hidden" id="organizationView" data-can-manage-organization>
+          <div class="employee-page-heading">
+            <div>
+              <small>FREEDOM STRUCTURE</small>
+              <h2>Organization</h2>
+              <p>Build as much—or as little—structure as the business needs. Groups can be locations, departments, crews, teams, divisions, projects, offices, warehouses, or anything custom.</p>
+            </div>
+            <button class="btn btn-primary" id="addOrgUnitBtn" type="button">+ Add Group</button>
+          </div>
+
+          <div class="freedom-banner">
+            <div>
+              <strong>No required hierarchy.</strong>
+              <span>Leave this empty for a flat startup. Add standalone groups for a small business, or nest groups for a larger organization.</span>
+            </div>
+            <div class="freedom-examples">
+              <span>Startup</span><span>Team</span><span>Department</span><span>Location</span><span>Crew</span><span>Division</span><span>Project</span><span>Custom</span>
+            </div>
+          </div>
+
+          <div class="stats-grid employee-stats">
+            <article class="stat-card"><span>Total Groups</span><strong id="orgStatTotal">0</strong></article>
+            <article class="stat-card"><span>Top-Level Groups</span><strong id="orgStatTopLevel">0</strong></article>
+            <article class="stat-card"><span>Nested Groups</span><strong id="orgStatNested">0</strong></article>
+            <article class="stat-card"><span>Assigned Employees</span><strong id="orgStatAssigned">0</strong></article>
+          </div>
+
+          <article class="panel">
+            <div class="panel-heading owner-panel-heading">
+              <div>
+                <small>OPTIONAL STRUCTURE</small>
+                <h3>Business Groups</h3>
+                <p class="owner-result-count" id="orgResultCount">0 groups</p>
+              </div>
+              <input class="input owner-search" id="orgSearch" type="search" placeholder="Search groups, types or descriptions..." />
+            </div>
+            <div class="org-tree" id="orgTree"></div>
+          </article>
+        </section>
+
+        <section class="app-view hidden" id="rolesView" data-business-owner-only>
+          <div class="employee-page-heading">
+            <div>
+              <small>OPTIONAL ROLE TEMPLATES</small>
+              <h2>Roles & Access</h2>
+              <p>Create reusable permission templates for any role the business wants. Roles are optional, and employee permissions can still be customized individually.</p>
+            </div>
+            <button class="btn btn-primary" id="addRoleBtn" type="button">+ Create Role</button>
+          </div>
+
+          <div class="freedom-banner">
+            <div>
+              <strong>Templates, not restrictions.</strong>
+              <span>Create “Manager,” “Crew Lead,” “Office Staff,” “Warehouse,” or any custom role. Applying a role fills permissions automatically, but the owner can override them per employee.</span>
+            </div>
+          </div>
+
+          <div class="stats-grid employee-stats">
+            <article class="stat-card"><span>Custom Roles</span><strong id="roleStatTotal">0</strong></article>
+            <article class="stat-card"><span>Employees Using Roles</span><strong id="roleStatAssigned">0</strong></article>
+            <article class="stat-card"><span>Admin Roles</span><strong id="roleStatAdmin">0</strong></article>
+            <article class="stat-card"><span>Standard Roles</span><strong id="roleStatStandard">0</strong></article>
+          </div>
+
+          <article class="panel">
+            <div class="panel-heading owner-panel-heading">
+              <div>
+                <small>ROLE TEMPLATES</small>
+                <h3>Custom Roles</h3>
+                <p class="owner-result-count" id="roleResultCount">0 roles</p>
+              </div>
+              <input class="input owner-search" id="roleSearch" type="search" placeholder="Search roles..." />
+            </div>
+            <div class="role-template-grid" id="roleTemplateGrid"></div>
+          </article>
+        </section>
+
+        <section class="app-view hidden" id="settingsView" data-can-manage-settings><article class="panel settings-panel"><div class="panel-heading"><div><small>BUSINESS</small><h3>Business Settings</h3></div></div><form id="businessSettingsForm" class="form-grid"><label>Business Name<input class="input" id="settingsBusinessName" required /></label><label>Owner Name<input class="input" id="settingsOwnerName" /></label><label>Business Phone<input class="input" id="settingsPhone" type="tel" /></label><label>Business Website<input class="input" id="settingsWebsite" type="url" placeholder="https://" /></label><div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div></form></article></section>
       </div>
     </div>
   </section>
@@ -925,6 +1005,109 @@
   </div>
 
 
+  <div class="modal-backdrop hidden" id="orgUnitModal" role="dialog" aria-modal="true" aria-labelledby="orgUnitModalTitle">
+    <div class="modal">
+      <button class="modal-close" data-close-org-unit aria-label="Close">×</button>
+      <span class="eyebrow">FREEDOM STRUCTURE</span>
+      <h2 id="orgUnitModalTitle">Add Group</h2>
+      <p class="modal-helper">Groups are optional. They can stand alone or be placed inside another group.</p>
+      <form id="orgUnitForm">
+        <input type="hidden" id="orgUnitId" />
+        <div class="form-grid">
+          <label>Group Name
+            <input class="input" id="orgUnitName" required maxlength="100" placeholder="Henderson Location, Crew A, Marketing..." />
+          </label>
+          <label>Group Type
+            <select class="input" id="orgUnitType">
+              <option>Team</option>
+              <option>Department</option>
+              <option>Location</option>
+              <option>Crew</option>
+              <option>Division</option>
+              <option>Project</option>
+              <option>Office</option>
+              <option>Warehouse</option>
+              <option>Branch</option>
+              <option>Custom</option>
+            </select>
+          </label>
+          <label class="hidden" id="orgUnitCustomTypeLabel">Custom Type
+            <input class="input" id="orgUnitCustomType" maxlength="60" placeholder="Region, Squad, Studio..." />
+          </label>
+          <label>Parent Group <span class="optional-label">(optional)</span>
+            <select class="input" id="orgUnitParent">
+              <option value="">No parent — top level</option>
+            </select>
+          </label>
+          <label class="wide">Description <span class="optional-label">(optional)</span>
+            <textarea class="input textarea" id="orgUnitDescription" rows="3" maxlength="300" placeholder="What is this group for?"></textarea>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" id="orgUnitSaveBtn">Save Group</button>
+        </div>
+        <p class="form-message" id="orgUnitMessage"></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="roleModal" role="dialog" aria-modal="true" aria-labelledby="roleModalTitle">
+    <div class="modal employee-modal">
+      <button class="modal-close" data-close-role aria-label="Close">×</button>
+      <span class="eyebrow">OPTIONAL ROLE TEMPLATE</span>
+      <h2 id="roleModalTitle">Create Role</h2>
+      <p class="modal-helper">Define a reusable starting point. Employees can still have individual permission overrides.</p>
+      <form id="roleForm">
+        <input type="hidden" id="roleId" />
+        <div class="form-grid">
+          <label>Role Name
+            <input class="input" id="roleName" required maxlength="100" placeholder="Manager, Crew Lead, Office Staff..." />
+          </label>
+          <label class="wide">Description
+            <textarea class="input textarea" id="roleDescription" rows="3" maxlength="300"></textarea>
+          </label>
+        </div>
+
+        <div class="employee-permissions-section">
+          <div class="owner-detail-section-heading"><div><small>DEFAULT PERMISSIONS</small><h3>Record Access</h3></div></div>
+          <div class="employee-permission-grid">
+            <label class="employee-permission"><input type="checkbox" id="roleCanCreate" checked /><span><strong>Create Records</strong><small>Add new business records.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanEdit" checked /><span><strong>Edit Records</strong><small>Edit records and use smart actions.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanDelete" /><span><strong>Delete Records</strong><small>Delete accessible records.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanMonthly" checked /><span><strong>Monthly Overview</strong><small>See monthly reporting.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanExport" /><span><strong>Export CSV</strong><small>Export accessible records.</small></span></label>
+          </div>
+        </div>
+
+        <div class="employee-permissions-section">
+          <div class="owner-detail-section-heading"><div><small>OPTIONAL ADMIN ACCESS</small><h3>Management Permissions</h3></div></div>
+          <div class="employee-permission-grid">
+            <label class="employee-permission"><input type="checkbox" id="roleCanManageEmployees" /><span><strong>Manage Employees</strong><small>Manage regular employee accounts.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanManageOrganization" /><span><strong>Manage Organization</strong><small>Manage flexible groups and hierarchy.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanManageTools" /><span><strong>Manage Tools</strong><small>Enable or disable business tools.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanManageSettings" /><span><strong>Manage Settings</strong><small>Edit basic business settings.</small></span></label>
+          </div>
+        </div>
+
+        <div class="employee-tools-section">
+          <div class="owner-detail-section-heading">
+            <div><small>DEFAULT TOOLS</small><h3>Allowed Business Tools</h3></div>
+            <div class="employee-tool-actions">
+              <button class="mini-btn" id="roleSelectAllTools" type="button">Select All</button>
+              <button class="mini-btn" id="roleClearTools" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="employee-tool-access-grid" id="roleToolAccessGrid"></div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" id="roleSaveBtn">Save Role</button>
+        </div>
+        <p class="form-message" id="roleMessage"></p>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-backdrop hidden" id="employeeModal" role="dialog" aria-modal="true" aria-labelledby="employeeModalTitle">
     <div class="modal employee-modal">
       <button class="modal-close" data-close-employee aria-label="Close">×</button>
@@ -938,8 +1121,14 @@
           <label>Employee Name
             <input class="input" id="employeeName" required maxlength="100" />
           </label>
-          <label>Job Title / Role
+          <label>Job Title
             <input class="input" id="employeeJobTitle" maxlength="100" placeholder="Crew Member, Office Manager..." />
+          </label>
+          <label>Role Template <span class="optional-label">(optional)</span>
+            <select class="input" id="employeeRoleTemplate">
+              <option value="">No role template — customize manually</option>
+            </select>
+            <span class="field-help">A role is only a starting template. Permissions can still be changed for this employee.</span>
           </label>
           <label>Email
             <input class="input" id="employeeEmail" type="email" required />
@@ -948,6 +1137,14 @@
             <input class="input" id="employeePassword" type="password" minlength="6" autocomplete="new-password" />
             <span class="field-help">At least 6 characters. The employee can later use password reset.</span>
           </label>
+        </div>
+
+        <div class="employee-tools-section">
+          <div class="owner-detail-section-heading">
+            <div><small>ORGANIZATION</small><h3>Group Membership <span class="optional-label">(optional)</span></h3></div>
+          </div>
+          <p class="panel-copy compact-copy">Assign this employee to any number of locations, teams, departments, crews or custom groups. Leave everything unchecked for no organizational grouping.</p>
+          <div class="employee-org-access-grid" id="employeeOrgAccessGrid"></div>
         </div>
 
         <div class="employee-permissions-section">
@@ -960,6 +1157,18 @@
             <label class="employee-permission"><input type="checkbox" id="employeeCanDelete" /><span><strong>Delete Records</strong><small>Permanently delete business records they can access.</small></span></label>
             <label class="employee-permission"><input type="checkbox" id="employeeCanMonthly" checked /><span><strong>Monthly Overview</strong><small>View monthly business history, costs, KPIs and trends.</small></span></label>
             <label class="employee-permission"><input type="checkbox" id="employeeCanExport" /><span><strong>Export CSV</strong><small>Download accessible business records as a CSV file.</small></span></label>
+          </div>
+
+          <div class="employee-admin-permissions" id="employeeAdminPermissions">
+            <div class="owner-detail-section-heading">
+              <div><small>MANAGEMENT ACCESS</small><h3>Optional Admin Permissions</h3></div>
+            </div>
+            <div class="employee-permission-grid">
+              <label class="employee-permission"><input type="checkbox" id="employeeCanManageEmployees" /><span><strong>Manage Employees</strong><small>Create and manage regular employee accounts. Only the business owner can grant management-level permissions.</small></span></label>
+              <label class="employee-permission"><input type="checkbox" id="employeeCanManageOrganization" /><span><strong>Manage Organization</strong><small>Create, edit and remove teams, locations, departments and custom groups.</small></span></label>
+              <label class="employee-permission"><input type="checkbox" id="employeeCanManageTools" /><span><strong>Manage Business Tools</strong><small>Turn Business Toolbox modules on or off for the organization.</small></span></label>
+              <label class="employee-permission"><input type="checkbox" id="employeeCanManageSettings" /><span><strong>Manage Business Settings</strong><small>Edit business name, phone and website. Ownership and subscription controls remain protected.</small></span></label>
+            </div>
           </div>
         </div>
 
