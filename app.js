@@ -1567,67 +1567,210 @@ function ownerPreviewFieldHtml(field){
   };
 }
 
+
+function ownerMockDate(offsetDays=0){
+  const d=new Date();
+  d.setDate(d.getDate()+offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function ownerMockDateTime(offsetDays=0,hour=9,minute=0){
+  return `${ownerMockDate(offsetDays)}T${String(hour).padStart(2,"0")}:${String(minute).padStart(2,"0")}`;
+}
+function ownerMockRecord(module,id,title,status,dueDate="",fields={},details=""){
+  return {module,id:`preview-${module}-${id}`,title,status,dueDate,fields,details};
+}
+function ownerToolPreviewSampleRecords(id){
+  const R=(n,title,status,due,fields,details="")=>ownerMockRecord(id,n,title,status,due,fields,details);
+  switch(id){
+    case "tasks": return [
+      R(1,"Send revised proposal","Open",ownerMockDate(1),{priority:"High",assignedTo:"Jordan Lee",recurring:"No"}),
+      R(2,"Update inventory counts","In Progress",ownerMockDate(3),{priority:"Medium",assignedTo:"Operations",recurring:"Weekly"}),
+      R(3,"Close monthly books","Complete",ownerMockDate(-2),{priority:"High",assignedTo:"Alex Morgan",recurring:"Monthly"})
+    ];
+    case "checklists": return [
+      R(1,"Opening Checklist","In Progress",ownerMockDate(),{frequency:"Daily",assignedTo:"Opening Shift",items:"Unlock front entrance\nTurn on register\nCheck lobby\nReview appointments",checkedItems:"[0,1]"}),
+      R(2,"Vehicle Closeout","Ready",ownerMockDate(1),{frequency:"Daily",assignedTo:"Drivers",items:"Remove trash\nRecord mileage\nCheck fuel\nLock vehicle",checkedItems:"[]"}),
+      R(3,"Weekly Safety Walk","Complete",ownerMockDate(5),{frequency:"Weekly",assignedTo:"Supervisor",items:"Emergency exits\nFire extinguishers\nWalkways\nFirst aid kit",checkedItems:"[0,1,2,3]"})
+    ];
+    case "equipment": return [
+      R(1,"Commercial Pressure Washer","Assigned",ownerMockDate(20),{assetNumber:"EQ-1042",serialNumber:"PW-88421",condition:"Good",assignedTo:"Crew A",location:"Henderson Yard"}),
+      R(2,"Portable Generator","Available",ownerMockDate(45),{assetNumber:"EQ-1008",serialNumber:"GN-44109",condition:"Excellent",assignedTo:"",location:"Warehouse"}),
+      R(3,"Floor Buffer","Needs Repair",ownerMockDate(-2),{assetNumber:"EQ-1120",serialNumber:"FB-90992",condition:"Damaged",assignedTo:"",location:"Main Office"})
+    ];
+    case "maintenance": return [
+      R(1,"Oil & Filter Service","Complete",ownerMockDate(85),{asset:"Truck 12",serviceType:"Preventive",lastService:ownerMockDate(-5),mileageHours:"48,220 mi",cost:"184.50",provider:"Silver State Auto"}),
+      R(2,"Generator Inspection","Scheduled",ownerMockDate(7),{asset:"Portable Generator",serviceType:"Inspection",lastService:ownerMockDate(-80),mileageHours:"312 hrs",cost:"",provider:"In-house"}),
+      R(3,"Hydraulic Hose Repair","In Progress",ownerMockDate(1),{asset:"Lift 3",serviceType:"Repair",lastService:ownerMockDate(),mileageHours:"1,082 hrs",cost:"325",provider:"Desert Equipment"})
+    ];
+    case "renewals": return [
+      R(1,"City Business License","Due Soon",ownerMockDate(12),{renewalType:"Business License",provider:"City of Henderson",referenceNumber:"BL-482104",reminderDays:"30"}),
+      R(2,"General Liability Policy","Current",ownerMockDate(94),{renewalType:"Insurance",provider:"Example Insurance",referenceNumber:"GL-204991",reminderDays:"60"}),
+      R(3,"Equipment Certification","Expired",ownerMockDate(-6),{renewalType:"Certification",provider:"Safety Board",referenceNumber:"CERT-0098",reminderDays:"30"})
+    ];
+    case "incidents": return [
+      R(1,"Minor slip near loading area","Investigating",ownerMockDate(2),{incidentType:"Safety",incidentDateTime:ownerMockDateTime(-1,14,25),location:"Warehouse Bay 2",peopleInvolved:"Taylor R.",witnesses:"Chris M.",damageInjury:"Minor ankle soreness",followUp:"Inspect floor drainage"}),
+      R(2,"Vehicle mirror damaged","Follow-up",ownerMockDate(4),{incidentType:"Property Damage",incidentDateTime:ownerMockDateTime(-3,10,5),location:"Client site",peopleInvolved:"Driver 7",witnesses:"None",damageInjury:"Passenger mirror cracked",followUp:"Repair quote requested"}),
+      R(3,"Unauthorized door access","Resolved","",{incidentType:"Security",incidentDateTime:ownerMockDateTime(-8,19,10),location:"Rear Office",peopleInvolved:"Unknown visitor",witnesses:"Front desk",damageInjury:"None",followUp:"Badge access updated"})
+    ];
+    case "shift-handoff": return [
+      R(1,"Customer pickup waiting","Open",ownerMockDate(),{fromShift:"Morning Shift",toShift:"Evening Shift",priority:"High",handoffNotes:"Customer will arrive after 5 PM for completed order."}),
+      R(2,"Printer issue at front desk","Acknowledged",ownerMockDate(),{fromShift:"Office",toShift:"Closing Staff",priority:"Medium",handoffNotes:"Temporary printer is connected; service ticket is open."}),
+      R(3,"Warehouse count finished","Resolved","",{fromShift:"Night Shift",toShift:"Morning Shift",priority:"Normal",handoffNotes:"Cycle count completed with two discrepancies noted."})
+    ];
+    case "asset-checkout": return [
+      R(1,"Thermal Camera","Checked Out",ownerMockDate(2),{assetId:"AS-044",checkedOutTo:"Morgan D.",checkoutDate:ownerMockDate(-1),conditionOut:"Excellent"}),
+      R(2,"Tablet 03","Overdue",ownerMockDate(-2),{assetId:"IT-003",checkedOutTo:"Crew B",checkoutDate:ownerMockDate(-8),conditionOut:"Good"}),
+      R(3,"Laser Measure","Returned","",{assetId:"AS-019",checkedOutTo:"Jordan L.",checkoutDate:ownerMockDate(-5),returnDate:ownerMockDate(-3),conditionOut:"Good",conditionIn:"Good"})
+    ];
+    case "logbook": return [
+      R(1,"Morning operations opened normally","Logged","",{logDate:ownerMockDate(),shift:"Morning",location:"Main Office",people:"Opening staff",issueFlag:"Routine",nextAction:"None"},"Doors, systems and work areas checked."),
+      R(2,"Delivery arrived early","Needs Follow-up",ownerMockDate(1),{logDate:ownerMockDate(),shift:"Morning",location:"Warehouse",people:"Receiving team",issueFlag:"Follow-up",nextAction:"Verify quantity against PO"},"Carrier arrived before scheduled window."),
+      R(3,"Power interruption","Resolved","",{logDate:ownerMockDate(-2),shift:"Evening",location:"Henderson Location",people:"Evening staff",issueFlag:"Important",nextAction:"Completed"},"Brief outage; equipment restarted normally.")
+    ];
+    case "employees": return [
+      R(1,"Jordan Lee","Active","",{role:"Operations Manager",department:"Operations",email:"jordan@example.com",phone:"(702) 555-0180",startDate:ownerMockDate(-400),employmentType:"Full Time"}),
+      R(2,"Taylor Reed","Active","",{role:"Technician",department:"Field Team",email:"taylor@example.com",phone:"(702) 555-0132",startDate:ownerMockDate(-150),employmentType:"Full Time"}),
+      R(3,"Morgan Diaz","On Leave","",{role:"Coordinator",department:"Office",email:"morgan@example.com",phone:"(702) 555-0120",startDate:ownerMockDate(-620),employmentType:"Full Time"})
+    ];
+    case "vehicles": return [
+      R(1,"Truck 12","Active",ownerMockDate(24),{year:"2024",makeModel:"Ford F-250",vin:"1FT••••1208",plate:"NV 84K2",mileage:"48,220",condition:"Good",assignedTo:"Crew A"}),
+      R(2,"Van 4","Needs Service",ownerMockDate(-1),{year:"2022",makeModel:"Ram ProMaster",vin:"3C6••••0401",plate:"NV 33P9",mileage:"72,190",condition:"Fair",assignedTo:"Delivery"}),
+      R(3,"Truck 7","Active",ownerMockDate(61),{year:"2025",makeModel:"Chevrolet Silverado",vin:"2GC••••0704",plate:"NV 18D7",mileage:"12,804",condition:"Excellent",assignedTo:"Crew B"})
+    ];
+    case "photo-proof": return [
+      R(1,"Completed storefront cleanup","Approved","",{jobReference:"JOB-1042",customerName:"Example Retail",proofType:"After",location:"Henderson",capturedAt:ownerMockDateTime(-1,15,40),capturedBy:"Crew A",photoUrl:""}),
+      R(2,"Pre-work condition","Captured","",{jobReference:"JOB-1051",customerName:"Sample Property",proofType:"Before",location:"Las Vegas",capturedAt:ownerMockDateTime(0,8,15),capturedBy:"Taylor R.",photoUrl:""}),
+      R(3,"Damage documentation","Needs Review","",{jobReference:"JOB-1038",customerName:"ABC Office",proofType:"Damage",location:"Loading Area",capturedAt:ownerMockDateTime(-2,11,10),capturedBy:"Jordan L.",photoUrl:""})
+    ];
+    case "vendors": return [
+      R(1,"Desert Office Supply","Preferred","",{service:"Office Supplies",contactName:"Jamie Cole",phone:"(702) 555-0114",email:"orders@example.com",website:"example.com",accountNumber:"AC-4412",paymentTerms:"Net 30"}),
+      R(2,"Silver State Auto","Active","",{service:"Fleet Maintenance",contactName:"Service Desk",phone:"(702) 555-0194",email:"service@example.com",website:"example.com",accountNumber:"FL-9081",paymentTerms:"Due on service"}),
+      R(3,"Metro Safety Co.","Active","",{service:"Safety Equipment",contactName:"Robin K.",phone:"(702) 555-0147",email:"sales@example.com",website:"example.com",accountNumber:"SA-1102",paymentTerms:"Net 15"})
+    ];
+    case "subscriptions": return [
+      R(1,"Adobe Creative Cloud","Active",ownerMockDate(14),{provider:"Adobe",cost:"59.99",billingCycle:"Monthly",accountEmail:"design@example.com",paymentMethod:"Card •••• 4580"}),
+      R(2,"Business Phone Service","Active",ownerMockDate(21),{provider:"Example Telecom",cost:"89.00",billingCycle:"Monthly",accountEmail:"admin@example.com",paymentMethod:"ACH"}),
+      R(3,"Domain Renewal","Active",ownerMockDate(160),{provider:"Namecheap",cost:"18.98",billingCycle:"Annual",accountEmail:"owner@example.com",paymentMethod:"Card •••• 4580"})
+    ];
+    case "documents": return [
+      R(1,"General Liability Certificate","Current",ownerMockDate(94),{documentType:"Insurance",referenceNumber:"COI-20941",issuedBy:"Example Insurance",responsiblePerson:"Office Manager",storageLocation:"Drive / Insurance",confidentiality:"Internal"}),
+      R(2,"City Business License","Needs Review",ownerMockDate(12),{documentType:"License",referenceNumber:"BL-482104",issuedBy:"City of Henderson",responsiblePerson:"Owner",storageLocation:"Drive / Licenses",confidentiality:"Internal"}),
+      R(3,"Employee Handbook","Current","",{documentType:"Policy",referenceNumber:"HR-2026-01",issuedBy:"Company",responsiblePerson:"HR",storageLocation:"Drive / HR",confidentiality:"Employees"})
+    ];
+    case "training": return [
+      R(1,"Workplace Safety","Completed",ownerMockDate(300),{employee:"Taylor Reed",provider:"Safety Board",completionDate:ownerMockDate(-65),certificateNumber:"SAFE-2041",score:"96%",requiredByRole:"Field Staff"}),
+      R(2,"Forklift Certification","Assigned",ownerMockDate(18),{employee:"Chris Morgan",provider:"Metro Training",assignedDate:ownerMockDate(-2),certificateNumber:"",score:"",requiredByRole:"Warehouse"}),
+      R(3,"Customer Service Refresher","In Progress",ownerMockDate(5),{employee:"Jordan Lee",provider:"Internal",assignedDate:ownerMockDate(-7),certificateNumber:"",score:"",requiredByRole:"Managers"})
+    ];
+    case "website-monitor": return [
+      R(1,"Main Website","Operational","",{url:"https://example.com",checkType:"Uptime",checkedAt:ownerMockDateTime(0,14,18),observedStatus:"Operational",checkedBy:"Office"}),
+      R(2,"Customer Portal","Degraded","",{url:"https://portal.example.com",checkType:"Performance",checkedAt:ownerMockDateTime(0,14,10),observedStatus:"Slow",checkedBy:"Admin"}),
+      R(3,"Booking Page","Down","",{url:"https://book.example.com",checkType:"Uptime",checkedAt:ownerMockDateTime(0,13,55),observedStatus:"Down",checkedBy:"Admin"})
+    ];
+    case "qr-assets": return [
+      R(1,"Front Desk Review QR","Active","",{assetId:"QR-001",destinationUrl:"https://example.com/review",location:"Front Desk",assignedTo:"Office",instructions:"Scan to leave a review"}),
+      R(2,"Equipment Manual QR","Active","",{assetId:"QR-014",destinationUrl:"https://example.com/manual",location:"Warehouse",assignedTo:"Equipment",instructions:"Scan for operating manual"}),
+      R(3,"Visitor Wi-Fi QR","Active","",{assetId:"QR-022",destinationUrl:"https://example.com/wifi",location:"Lobby",assignedTo:"Reception",instructions:"Guest Wi-Fi instructions"})
+    ];
+    case "supplies": return [
+      R(1,"Nitrile Gloves","Low Stock","",{sku:"GLV-100",location:"Warehouse",quantity:"18",reorderLevel:"25",unit:"boxes",supplier:"Metro Safety",urgency:"High"}),
+      R(2,"Printer Paper","In Stock","",{sku:"PPR-20",location:"Main Office",quantity:"42",reorderLevel:"10",unit:"reams",supplier:"Desert Office Supply",urgency:"Normal"}),
+      R(3,"Packing Tape","Out of Stock","",{sku:"TAPE-3",location:"Shipping",quantity:"0",reorderLevel:"12",unit:"rolls",supplier:"Supply House",urgency:"Urgent"})
+    ];
+    case "warranties": return [
+      R(1,"Office Copier","Active",ownerMockDate(210),{manufacturer:"Canon",model:"DX-500",serialNumber:"CN-84012",purchaseDate:ownerMockDate(-420),retailer:"Office Supplier",warrantyType:"Extended",claimContact:"(800) 555-0100"}),
+      R(2,"Truck 12 Bed Cover","Active",ownerMockDate(42),{manufacturer:"Example Auto",model:"ProCover",serialNumber:"PC-12902",purchaseDate:ownerMockDate(-680),retailer:"Auto Shop",warrantyType:"Manufacturer",claimContact:"claims@example.com"}),
+      R(3,"Warehouse Scanner","Claim Open",ownerMockDate(75),{manufacturer:"Zebra",model:"TC-Series",serialNumber:"ZB-23011",purchaseDate:ownerMockDate(-300),retailer:"Tech Vendor",warrantyType:"Replacement",claimContact:"Support Portal"})
+    ];
+    case "complaints": return [
+      R(1,"Late service arrival","New",ownerMockDate(2),{customer:"Example Customer",contact:"customer@example.com",receivedAt:ownerMockDateTime(0,9,15),channel:"Email",category:"Service",severity:"Moderate",assignedTo:"Office"}),
+      R(2,"Invoice amount question","In Review",ownerMockDate(1),{customer:"ABC Property",contact:"(702) 555-0102",receivedAt:ownerMockDateTime(-1,14,30),channel:"Phone",category:"Billing",severity:"Low",assignedTo:"Manager"}),
+      R(3,"Damaged item report","Resolved","",{customer:"Sample Retail",contact:"manager@example.com",receivedAt:ownerMockDateTime(-4,11,5),channel:"Website",category:"Damage",severity:"High",assignedTo:"Operations",resolution:"Replacement completed"})
+    ];
+    case "suggestions": return [
+      R(1,"Add barcode labels","Submitted","",{submittedBy:"Warehouse Team",anonymous:"No",category:"Operations",priority:"Medium",expectedBenefit:"Faster inventory counts",estimatedEffort:"Medium"}),
+      R(2,"Move morning meeting to 8:15","Under Review","",{submittedBy:"Crew A",anonymous:"No",category:"Scheduling",priority:"Low",expectedBenefit:"Less traffic delay",estimatedEffort:"Low"}),
+      R(3,"Create mobile equipment checklist","Approved","",{submittedBy:"Supervisor",anonymous:"No",category:"Safety",priority:"High",expectedBenefit:"Consistent inspections",estimatedEffort:"Medium"}),
+      R(4,"Digital visitor log","Implemented","",{submittedBy:"Office",anonymous:"No",category:"Administration",priority:"Medium",expectedBenefit:"Better visitor tracking",estimatedEffort:"Low"})
+    ];
+    case "visitor-log": return [
+      R(1,"Jamie Collins","On Site","",{company:"Metro Supply",host:"Jordan Lee",reason:"Vendor meeting",arrival:ownerMockDateTime(0,13,42),phone:"(702) 555-0192",badge:"V-014"}),
+      R(2,"Robin Chen","On Site","",{company:"Independent",host:"Office Manager",reason:"Interview",arrival:ownerMockDateTime(0,14,5),phone:"(702) 555-0155",badge:"V-015"}),
+      R(3,"Alex Parker","Checked Out","",{company:"Example Telecom",host:"IT",reason:"Service visit",arrival:ownerMockDateTime(0,9,20),departure:ownerMockDateTime(0,10,45),badge:"V-010"})
+    ];
+    case "package-log": return [
+      R(1,"1Z84X03...4412","Received","",{carrier:"UPS",sender:"Office Supplier",recipient:"Jordan Lee",receivedAt:ownerMockDateTime(0,11,42),receivedBy:"Front Desk",storageLocation:"Mail Room"}),
+      R(2,"9405...8821","Recipient Notified","",{carrier:"USPS",sender:"Client Services",recipient:"Morgan Diaz",receivedAt:ownerMockDateTime(0,10,18),receivedBy:"Front Desk",storageLocation:"Shelf B"}),
+      R(3,"7734...0192","Picked Up","",{carrier:"FedEx",sender:"Tech Vendor",recipient:"IT Department",receivedAt:ownerMockDateTime(-1,15,9),receivedBy:"Office",storageLocation:"Mail Room",pickedUpBy:"Chris M.",pickupDate:ownerMockDateTime(0,8,40)})
+    ];
+    default: return [
+      R(1,`${toolById(id).name} Example 1`,toolById(id).statuses?.[0]||"Open",ownerMockDate(3),{}),
+      R(2,`${toolById(id).name} Example 2`,toolById(id).statuses?.[1]||"In Progress",ownerMockDate(7),{})
+    ];
+  }
+}
+function ownerPreviewWorkspaceName(mode){
+  return ({
+    taskBoard:"Task Board",checklistLibrary:"Checklist Library",assetInventory:"Asset Inventory",
+    serviceTimeline:"Service Timeline",renewalRadar:"Renewal Radar",incidentCases:"Incident Case Manager",
+    handoffFeed:"Shift Handoff Feed",checkoutDesk:"Checkout Desk",logbookTimeline:"Daily Log Timeline",
+    employeeDirectory:"Employee Directory",fleetDashboard:"Fleet Dashboard",proofGallery:"Photo Proof Gallery",
+    vendorDirectory:"Vendor Directory",subscriptionLedger:"Subscription Ledger",documentRegister:"Document Register",
+    trainingMatrix:"Training Matrix",websiteStatus:"Website Status Dashboard",qrLabels:"QR Asset Labels",
+    supplyInventory:"Supply Inventory",warrantyCoverage:"Warranty Coverage",complaintPipeline:"Complaint Pipeline",
+    ideaBoard:"Idea Board",receptionDesk:"Reception Desk",packageQueue:"Package Queue"
+  })[mode]||"Custom Workspace";
+}
+function switchOwnerPreviewTab(name){
+  document.querySelectorAll("[data-owner-preview-tab]").forEach(btn=>btn.classList.toggle("active",btn.dataset.ownerPreviewTab===name));
+  $("ownerPreviewWorkspacePanel").classList.toggle("hidden",name!=="workspace");
+  $("ownerPreviewFormPanel").classList.toggle("hidden",name!=="form");
+  $("ownerPreviewSetupPanel").classList.toggle("hidden",name!=="setup");
+}
+document.querySelectorAll("[data-owner-preview-tab]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerPreviewTab(btn.dataset.ownerPreviewTab)));
+
 function openOwnerToolPreview(id){
   const t=toolById(id),cfg=toolExperience(id);
   if(!t)return;
 
-  const workflowNames={
-    taskBoard:"Task Board",
-    checklistLibrary:"Checklist Library",
-    assetInventory:"Asset Inventory",
-    serviceTimeline:"Service Timeline",
-    renewalRadar:"Renewal Radar",
-    incidentCases:"Incident Case Manager",
-    handoffFeed:"Shift Handoff Feed",
-    checkoutDesk:"Checkout Desk",
-    logbookTimeline:"Daily Log Timeline",
-    employeeDirectory:"Employee Directory",
-    fleetDashboard:"Fleet Dashboard",
-    proofGallery:"Photo Proof Gallery",
-    vendorDirectory:"Vendor Directory",
-    subscriptionLedger:"Subscription Ledger",
-    documentRegister:"Document Register",
-    trainingMatrix:"Training Matrix",
-    websiteStatus:"Website Status Dashboard",
-    qrLabels:"QR Asset Labels",
-    supplyInventory:"Supply Inventory",
-    warrantyCoverage:"Warranty Coverage",
-    complaintPipeline:"Complaint Pipeline",
-    ideaBoard:"Idea Board",
-    receptionDesk:"Reception Desk",
-    packageQueue:"Package Queue"
-  };
-
+  const workspaceName=ownerPreviewWorkspaceName(cfg.mode);
   $("ownerToolPreviewIcon").textContent=t.icon||"•";
   $("ownerToolPreviewCategory").textContent=(t.category||"Other").toUpperCase();
   $("ownerToolPreviewTitle").textContent=t.name||"Tool Preview";
   $("ownerToolPreviewDescription").textContent=t.desc||"";
-  $("ownerToolPreviewHelper").textContent=workflowNames[cfg.mode]||"Custom Workspace";
+  $("ownerToolPreviewHelper").textContent=workspaceName;
   $("ownerToolPreviewDueLabel").textContent=t.dueLabel||"Due Date";
   $("ownerToolPreviewStatusCount").textContent=String((t.statuses||[]).length);
   $("ownerToolPreviewFieldCount").textContent=String((t.fields||[]).length);
-  $("ownerPreviewToolName").value=`${t.name} — ${workflowNames[cfg.mode]||"Custom Workspace"}`;
+  $("ownerWorkspacePreviewName").textContent=workspaceName;
+  $("ownerWorkspacePreviewAddBtn").textContent=cfg.addLabel||"+ Add";
+  $("ownerPreviewToolName").value=t.name;
 
+  // Realistic customer workspace using the SAME renderer as the live customer tool.
+  const samples=ownerToolPreviewSampleRecords(id);
+  const complete=samples.filter(completedStatus).length;
+  const overdue=samples.filter(r=>recordDueHealth(r).key==="overdue").length;
+  const dueSoon=samples.filter(r=>recordDueHealth(r).key==="soon").length;
+  $("ownerWorkspacePreviewStats").innerHTML=[
+    workspaceStat("Sample Records",samples.length),
+    workspaceStat("Active",samples.length-complete),
+    workspaceStat("Due / Attention",overdue+dueSoon),
+    workspaceStat("Completed",complete)
+  ].join("");
+  $("ownerWorkspacePreviewStage").innerHTML=renderToolWorkspaceContent(id,samples,cfg);
+
+  // Add/Edit form is still available, but only on the second tab.
   const fieldMap=new Map((t.fields||[]).map(f=>[f.key,f]));
   const used=new Set();
   const configRows=[];
-
   const sectionHtml=(cfg.sections||[]).map(section=>{
     const fields=(section.keys||[]).map(key=>fieldMap.get(key)).filter(Boolean);
     fields.forEach(f=>used.add(f.key));
     if(!fields.length)return "";
-
     const rendered=fields.map(ownerPreviewFieldHtml);
-    configRows.push(`<div class="owner-preview-workflow-config">
-      <strong>${safeText(section.title)}</strong>
-      <span>${safeText(section.hint||"")}</span>
-    </div>`, ...rendered.map(x=>x.config));
-
+    configRows.push(`<div class="owner-preview-workflow-config"><strong>${safeText(section.title)}</strong><span>${safeText(section.hint||"")}</span></div>`,...rendered.map(x=>x.config));
     return `<section class="owner-preview-unique-section">
-      <div class="owner-preview-unique-section-head">
-        <strong>${safeText(section.title)}</strong>
-        <span>${safeText(section.hint||"")}</span>
-      </div>
+      <div class="owner-preview-unique-section-head"><strong>${safeText(section.title)}</strong><span>${safeText(section.hint||"")}</span></div>
       <div class="owner-preview-unique-fields">${rendered.map(x=>x.form).join("")}</div>
     </section>`;
   }).join("");
@@ -1636,7 +1779,7 @@ function openOwnerToolPreview(id){
   let leftoverHtml="";
   if(leftovers.length){
     const rendered=leftovers.map(ownerPreviewFieldHtml);
-    configRows.push(`<div class="owner-preview-workflow-config"><strong>Additional Details</strong><span>Other information tracked by this tool.</span></div>`,...rendered.map(x=>x.config));
+    configRows.push(...rendered.map(x=>x.config));
     leftoverHtml=`<section class="owner-preview-unique-section">
       <div class="owner-preview-unique-section-head"><strong>Additional Details</strong><span>Other information tracked by this tool.</span></div>
       <div class="owner-preview-unique-fields">${rendered.map(x=>x.form).join("")}</div>
@@ -1647,44 +1790,26 @@ function openOwnerToolPreview(id){
   $("ownerToolPreviewFields").innerHTML=`
     <div class="owner-preview-workflow-banner">
       <span class="tool-form-context-icon">${safeText(t.icon)}</span>
-      <div>
-        <small>UNIQUE CUSTOMER WORKSPACE</small>
-        <strong>${safeText(workflowNames[cfg.mode]||"Custom Workspace")}</strong>
-        <span>${safeText(cfg.formIntro||t.desc||"")}</span>
-      </div>
+      <div><small>DATA ENTRY</small><strong>${safeText(cfg.addLabel||"+ Add")}</strong><span>${safeText(cfg.formIntro||t.desc||"")}</span></div>
     </div>
-    ${sectionHtml}
-    ${leftoverHtml}`;
+    ${sectionHtml}${leftoverHtml}`;
 
-  $("ownerToolConfigList").innerHTML=`
-    <div class="owner-preview-workflow-config highlight">
-      <strong>${safeText(cfg.addLabel||"+ Add")}</strong>
-      <span>Primary create action</span>
-    </div>
-    <div class="owner-preview-workflow-config highlight">
-      <strong>${safeText(workflowNames[cfg.mode]||"Custom Workspace")}</strong>
-      <span>Customer workspace layout</span>
-    </div>
-    ${configRows.join("")}`;
-
-  $("ownerToolPreviewStatus").innerHTML=(t.statuses||["Open","In Progress","Complete","Archived"])
-    .map(s=>`<option>${safeText(s)}</option>`).join("");
-
+  $("ownerToolPreviewStatus").innerHTML=(t.statuses||["Open","In Progress","Complete","Archived"]).map(s=>`<option>${safeText(s)}</option>`).join("");
   $("ownerToolPreviewDueField").childNodes[0].nodeValue=`${t.dueLabel||"Due Date"} `;
 
+  $("ownerToolConfigList").innerHTML=`
+    <div class="owner-preview-workflow-config highlight"><strong>${safeText(workspaceName)}</strong><span>Primary customer workspace</span></div>
+    <div class="owner-preview-workflow-config highlight"><strong>${safeText(cfg.addLabel||"+ Add")}</strong><span>Primary create action</span></div>
+    ${configRows.join("")}`;
+
   $("ownerToolPreviewBullets").innerHTML=[
-    `Workspace: ${workflowNames[cfg.mode]||"Custom Workspace"}`,
+    `Customer workspace: ${workspaceName}`,
     `Create action: ${cfg.addLabel||"+ Add"}`,
     `Form sections: ${(cfg.sections||[]).map(s=>s.title).join(" • ")}`,
     ...(t.bullets||[])
   ].map(item=>`<li>${safeText(item)}</li>`).join("");
 
-  const notesLabel=$("ownerToolPreviewFields").closest(".owner-preview-form")?.querySelector("label:last-of-type");
-  if(notesLabel){
-    const textNode=[...notesLabel.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
-    if(textNode)textNode.nodeValue=`${cfg.notes||"Notes"} `;
-  }
-
+  switchOwnerPreviewTab("workspace");
   $("ownerToolPreviewModal").classList.remove("hidden");
 }
 document.querySelectorAll("[data-close-owner-tool-preview]").forEach(btn=>{
