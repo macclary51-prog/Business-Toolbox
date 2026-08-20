@@ -127,6 +127,7 @@
       <div class="business-block"><small>BUSINESS</small><strong id="sidebarBusinessName">Loading...</strong><span id="sidebarUserEmail"></span><span class="sidebar-role" id="sidebarUserRole"></span></div>
       <nav class="sidebar-nav">
         <button class="side-link active" data-view="dashboard"><span>⌂</span> Dashboard</button>
+        <button class="side-link team-hub-link" data-view="teamHub"><span>◎</span> Team Hub <b class="team-hub-badge hidden" id="teamHubBadge">0</b></button>
         <button class="side-link" data-view="monthly" id="monthlyNavBtn"><span>◫</span> Monthly Overview</button>
         <button class="side-link" data-view="tools" data-can-manage-tools><span>▦</span> Tools</button>
         <button class="side-link" data-view="records"><span>☰</span> All Records</button>
@@ -158,6 +159,40 @@
 
           <div class="app-grid-two"><article class="panel"><div class="panel-heading"><div><small>QUICK ACCESS</small><h3>Your Tools</h3></div><button class="text-btn" data-go-tools>Manage</button></div><div class="tool-grid" id="dashboardToolGrid"></div></article><article class="panel"><div class="panel-heading"><div><small>RECENT</small><h3>Latest Activity</h3></div></div><div class="record-list compact" id="recentRecords"></div></article></div>
         </section>
+        <section class="app-view hidden" id="teamHubView">
+          <div class="team-hub-heading">
+            <div><small>COLLABORATION</small><h2>Team Hub</h2><p>Work can move between the owner, managers, employees, teams, locations, departments or any custom group.</p></div>
+            <button class="btn btn-primary" id="teamHubMessageBtn" type="button">+ Send Message</button>
+          </div>
+          <div class="stats-grid team-hub-stats">
+            <article class="stat-card"><span>Assigned to Me</span><strong id="teamStatAssigned">0</strong></article>
+            <article class="stat-card"><span>My Group Work</span><strong id="teamStatGroup">0</strong></article>
+            <article class="stat-card"><span>Unread Messages</span><strong id="teamStatUnread">0</strong></article>
+            <article class="stat-card"><span>Recent Team Activity</span><strong id="teamStatActivity">0</strong></article>
+          </div>
+          <div class="team-hub-tabs">
+            <button class="team-hub-tab active" type="button" data-team-hub-tab="work">My Work</button>
+            <button class="team-hub-tab" type="button" data-team-hub-tab="messages">Messages</button>
+            <button class="team-hub-tab" type="button" data-team-hub-tab="activity">Team Activity</button>
+          </div>
+          <section class="team-hub-panel" id="teamHubWorkPanel">
+            <div class="team-work-grid">
+              <article class="panel"><div class="panel-heading"><div><small>DIRECT</small><h3>Assigned to Me</h3></div><span id="teamDirectCount">0</span></div><div class="team-work-list" id="teamDirectWork"></div></article>
+              <article class="panel"><div class="panel-heading"><div><small>GROUPS</small><h3>My Team / Group Work</h3></div><span id="teamGroupCount">0</span></div><div class="team-work-list" id="teamGroupWork"></div></article>
+            </div>
+          </section>
+          <section class="team-hub-panel hidden" id="teamHubMessagesPanel">
+            <article class="panel">
+              <div class="panel-heading owner-panel-heading"><div><small>COMMUNICATION</small><h3>Messages</h3><p class="owner-result-count" id="teamMessageResultCount">0 messages</p></div>
+                <div class="team-message-controls"><button class="mini-btn active" type="button" data-message-box="inbox">Inbox</button><button class="mini-btn" type="button" data-message-box="sent">Sent</button><input class="input owner-search" id="teamMessageSearch" type="search" placeholder="Search messages..." /></div>
+              </div><div class="team-message-list" id="teamMessageList"></div>
+            </article>
+          </section>
+          <section class="team-hub-panel hidden" id="teamHubActivityPanel">
+            <article class="panel"><div class="panel-heading owner-panel-heading"><div><small>BUSINESS FEED</small><h3>Recent Collaboration</h3><p class="owner-result-count">Assignments, handoffs, comments and messages</p></div><button class="mini-btn" id="teamActivityRefreshBtn" type="button">Refresh</button></div><div class="team-activity-list" id="teamActivityList"></div></article>
+          </section>
+        </section>
+
         <section class="app-view hidden" id="monthlyView">
           <div class="monthly-heading">
             <div><small>BUSINESS HISTORY</small><h2>Monthly Overview</h2><p>Review activity from any month without losing previous records.</p></div>
@@ -1091,6 +1126,7 @@
             <label class="employee-permission"><input type="checkbox" id="roleCanDelete" /><span><strong>Delete Records</strong><small>Delete accessible records.</small></span></label>
             <label class="employee-permission"><input type="checkbox" id="roleCanMonthly" checked /><span><strong>Monthly Overview</strong><small>See monthly reporting.</small></span></label>
             <label class="employee-permission"><input type="checkbox" id="roleCanExport" /><span><strong>Export CSV</strong><small>Export accessible records.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="roleCanAssign" checked /><span><strong>Assign / Handoff Work</strong><small>Assign accessible records to coworkers or groups.</small></span></label>
           </div>
         </div>
 
@@ -1172,6 +1208,7 @@
             <label class="employee-permission"><input type="checkbox" id="employeeCanDelete" /><span><strong>Delete Records</strong><small>Permanently delete business records they can access.</small></span></label>
             <label class="employee-permission"><input type="checkbox" id="employeeCanMonthly" checked /><span><strong>Monthly Overview</strong><small>View monthly business history, costs, KPIs and trends.</small></span></label>
             <label class="employee-permission"><input type="checkbox" id="employeeCanExport" /><span><strong>Export CSV</strong><small>Download accessible business records as a CSV file.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="employeeCanAssign" checked /><span><strong>Assign / Handoff Work</strong><small>Assign accessible records to coworkers or groups.</small></span></label>
           </div>
 
           <div class="employee-admin-permissions" id="employeeAdminPermissions">
@@ -1207,6 +1244,12 @@
     </div>
   </div>
 
+  <div class="modal-backdrop hidden" id="teamMessageModal" role="dialog" aria-modal="true" aria-labelledby="teamMessageModalTitle">
+    <div class="modal team-message-modal"><button class="modal-close" data-close-team-message aria-label="Close">×</button><span class="eyebrow">TEAM COMMUNICATION</span><h2 id="teamMessageModalTitle">Send Message</h2><p class="modal-helper">Send to a person or everyone in a business group.</p>
+      <form id="teamMessageForm"><div class="form-grid"><label>Send To<select class="input" id="teamMessageTarget" required></select></label><label>Related Work <span class="optional-label">(optional)</span><select class="input" id="teamMessageRecord"><option value="">No related record</option></select></label><label class="wide">Subject<input class="input" id="teamMessageSubject" maxlength="140" required /></label><label class="wide">Message<textarea class="input textarea" id="teamMessageBody" rows="6" maxlength="3000" required></textarea></label></div><div class="form-actions split"><button class="btn btn-secondary" type="button" data-close-team-message>Cancel</button><button class="btn btn-primary" type="submit">Send Message</button></div><p class="form-message" id="teamMessageFormMessage"></p></form>
+    </div>
+  </div>
+
   <div class="modal-backdrop hidden" id="recordDetailModal" role="dialog" aria-modal="true" aria-labelledby="recordDetailTitle">
     <div class="modal record-detail-modal">
       <button class="modal-close" data-close-record-detail aria-label="Close">×</button>
@@ -1221,6 +1264,12 @@
       <div class="record-detail-meta" id="recordDetailMeta"></div>
       <div class="record-detail-fields" id="recordDetailFields"></div>
       <div class="record-detail-notes" id="recordDetailNotes"></div>
+      <section class="record-collaboration-panel">
+        <div class="record-collaboration-heading"><div><small>COLLABORATION</small><h3>People, Handoff & Conversation</h3></div><span id="recordCollaborationSummary"></span></div>
+        <div class="record-assignment-summary" id="recordAssignmentSummary"></div>
+        <div class="record-handoff-bar" id="recordHandoffBar"><select class="input" id="recordHandoffTarget"></select><button class="btn btn-secondary" id="recordHandoffBtn" type="button">Handoff / Assign</button></div>
+        <div class="record-conversation"><div class="record-conversation-list" id="recordConversationList"></div><form class="record-comment-form" id="recordCommentForm"><textarea class="input textarea" id="recordCommentText" rows="2" maxlength="1200" placeholder="Add a comment, update, question or handoff note..."></textarea><button class="btn btn-primary" type="submit">Send Comment</button></form><p class="form-message" id="recordCommentMessage"></p></div>
+      </section>
       <div class="record-detail-actions" id="recordDetailActions"></div>
     </div>
   </div>
@@ -1255,6 +1304,11 @@
         <div class="tool-form-context" id="toolFormContext"></div>
         <label class="tool-form-switcher">Tool<select class="input" id="recordModule" required></select></label>
         <div class="dynamic-fields" id="dynamicFields"></div>
+        <section class="record-collaboration-form">
+          <div class="tool-form-section-head"><strong>Assign & Share Work</strong><span>Optional. Assign this item to people or groups and hand it off later.</span></div>
+          <div class="record-collaboration-actions"><button class="mini-btn" id="recordAssignMeBtn" type="button">Assign to Me</button><button class="mini-btn" id="recordClearAssignmentsBtn" type="button">Clear Assignments</button></div>
+          <div class="record-assignment-columns"><div><small>PEOPLE</small><div class="record-assignee-grid" id="recordAssigneeUsers"></div></div><div><small>GROUPS</small><div class="record-assignee-grid" id="recordAssigneeGroups"></div></div></div>
+        </section>
         <div class="tool-form-footer-fields">
           <label>Status<select class="input" id="recordStatus"><option>Open</option><option>In Progress</option><option>Complete</option><option>Archived</option></select></label>
           <label id="dueDateLabel">Due Date<input class="input" id="recordDueDate" type="date" /></label>
