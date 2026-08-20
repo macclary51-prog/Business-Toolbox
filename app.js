@@ -526,6 +526,119 @@ onAuthStateChanged(auth,async user=>{
 function showPublic(){publicSite.classList.remove("hidden");publicFooter.classList.remove("hidden");appShell.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.remove("hidden")}
 function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add("hidden");ownerShell.classList.add("hidden");document.querySelector(".site-header").classList.add("hidden");appShell.classList.remove("hidden");$("sidebarBusinessName").textContent=business.name;$("sidebarUserEmail").textContent=currentUser.email||"";$("settingsBusinessName").value=business.name||"";$("settingsOwnerName").value=business.ownerName||userProfile.displayName||"";$("settingsPhone").value=business.phone||"";$("settingsWebsite").value=business.website||"";renderModuleOptions();renderEverything();switchView("dashboard")}
 
+
+const ownerViews={
+  overview:$("ownerOverviewView"),
+  businesses:$("ownerBusinessesView"),
+  tools:$("ownerToolsView"),
+  attention:$("ownerAttentionView")
+};
+function switchOwnerView(name){
+  Object.entries(ownerViews).forEach(([key,el])=>el?.classList.toggle("hidden",key!==name));
+  document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.ownerView===name));
+}
+document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerView(btn.dataset.ownerView)));
+document.querySelectorAll("[data-owner-jump]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerView(btn.dataset.ownerJump)));
+
+function ownerMonthKey(date){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}`;
+}
+function ownerDate(value){
+  if(!value)return null;
+  if(typeof value.toDate==="function")return value.toDate();
+  if(value.seconds)return new Date(value.seconds*1000);
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?null:d;
+}
+function businessAttentionReasons(b){
+  const reasons=[];
+  const sub=b.subscriptionStatus||"setup_required";
+  const access=b.platformStatus||"active";
+  if(sub==="setup_required")reasons.push({text:"Setup required",tone:"warn"});
+  if(sub==="past_due")reasons.push({text:"Past due",tone:"bad"});
+  if(sub==="canceled")reasons.push({text:"Canceled",tone:"bad"});
+  if(access==="suspended")reasons.push({text:"Suspended",tone:"bad"});
+  if(!b.ownerName)reasons.push({text:"Missing owner",tone:"warn"});
+  if(!b.phone&&!b.website)reasons.push({text:"Limited contact info",tone:"warn"});
+  return reasons;
+}
+function renderOwnerGrowthChart(){
+  if(!$("ownerGrowthChart"))return;
+  const now=new Date();
+  const months=[];
+  for(let offset=5;offset>=0;offset--){
+    const d=new Date(now.getFullYear(),now.getMonth()-offset,1);
+    const key=ownerMonthKey(d);
+    const count=ownerBusinesses.filter(b=>{
+      const created=ownerDate(b.createdAt);
+      return created&&ownerMonthKey(created)===key;
+    }).length;
+    months.push({label:d.toLocaleDateString(undefined,{month:"short"}),count});
+  }
+  const max=Math.max(1,...months.map(m=>m.count));
+  $("ownerGrowthChart").innerHTML=months.map(m=>{
+    const h=Math.max(4,Math.round((m.count/max)*120));
+    return `<div class="owner-growth-column">
+      <div class="owner-growth-bar-wrap"><div class="owner-growth-bar" style="height:${h}px" title="${safeText(m.label)}: ${m.count} signups"></div></div>
+      <strong>${m.count}</strong><span>${safeText(m.label)}</span>
+    </div>`;
+  }).join("");
+}
+function renderOwnerTopTools(){
+  if(!$("ownerTopTools"))return;
+  const rows=toolDefinitions.map(t=>{
+    const count=ownerBusinesses.filter(b=>Array.isArray(b.enabledModules)&&b.enabledModules.includes(t.id)).length;
+    return {tool:t,count};
+  }).sort((a,b)=>b.count-a.count).slice(0,6);
+  $("ownerTopTools").innerHTML=rows.length?rows.map(({tool,count})=>`
+    <div class="owner-top-tool-row">
+      <div><strong>${safeText(tool.icon)} ${safeText(tool.name)}</strong><span>${safeText(tool.category)}</span></div>
+      <span class="owner-top-tool-count">${count}</span>
+    </div>`).join(""):'<div class="empty-state">No tool usage yet.</div>';
+}
+function renderOwnerNewestBusinesses(){
+  if(!$("ownerNewestBusinesses"))return;
+  const newest=ownerBusinesses.slice().sort((a,b)=>{
+    const ad=ownerDate(a.createdAt)?.getTime()||0;
+    const bd=ownerDate(b.createdAt)?.getTime()||0;
+    return bd-ad;
+  }).slice(0,6);
+  $("ownerNewestBusinesses").innerHTML=newest.length?newest.map(b=>`
+    <div class="owner-new-business-row">
+      <div><strong>${safeText(b.name||"Unnamed Business")}</strong><span>${safeText(b.ownerName||"No owner")} • ${safeText(formatOwnerDate(b.createdAt))}</span></div>
+      <button class="mini-btn" data-owner-view-business="${b.id}">View</button>
+    </div>`).join(""):'<div class="empty-state">No businesses yet.</div>';
+  document.querySelectorAll("[data-owner-view-business]").forEach(btn=>btn.onclick=()=>openOwnerBusinessDetails(btn.dataset.ownerViewBusiness));
+}
+function renderOwnerAttention(){
+  const attention=ownerBusinesses.map(b=>({business:b,reasons:businessAttentionReasons(b)})).filter(x=>x.reasons.length);
+  if($("ownerAttentionSetup"))$("ownerAttentionSetup").textContent=ownerBusinesses.filter(b=>(b.subscriptionStatus||"setup_required")==="setup_required").length;
+  if($("ownerAttentionPastDue"))$("ownerAttentionPastDue").textContent=ownerBusinesses.filter(b=>b.subscriptionStatus==="past_due").length;
+  if($("ownerAttentionCanceled"))$("ownerAttentionCanceled").textContent=ownerBusinesses.filter(b=>b.subscriptionStatus==="canceled").length;
+  if($("ownerAttentionSuspended"))$("ownerAttentionSuspended").textContent=ownerBusinesses.filter(b=>(b.platformStatus||"active")==="suspended").length;
+
+  const html=attention.length?attention.map(({business:b,reasons})=>`
+    <div class="owner-attention-row">
+      <div><strong>${safeText(b.name||"Unnamed Business")}</strong><span>${safeText(b.ownerName||"No owner name")}</span></div>
+      <div class="owner-attention-reason">
+        ${reasons.map(r=>`<span class="owner-attention-chip ${r.tone}">${safeText(r.text)}</span>`).join("")}
+        <button class="mini-btn" data-owner-attention-open="${b.id}">Open</button>
+      </div>
+    </div>`).join(""):'<div class="empty-state">No accounts currently need attention.</div>';
+
+  if($("ownerAttentionList"))$("ownerAttentionList").innerHTML=html;
+  if($("ownerAttentionPreview")){
+    $("ownerAttentionPreview").innerHTML=attention.length
+      ? attention.slice(0,5).map(({business:b,reasons})=>`
+        <div class="owner-attention-row">
+          <div><strong>${safeText(b.name||"Unnamed Business")}</strong><span>${safeText(b.ownerName||"No owner name")}</span></div>
+          <div class="owner-attention-reason">${reasons.slice(0,2).map(r=>`<span class="owner-attention-chip ${r.tone}">${safeText(r.text)}</span>`).join("")}</div>
+        </div>`).join("")
+      : '<div class="empty-state">No accounts currently need attention.</div>';
+  }
+  document.querySelectorAll("[data-owner-attention-open]").forEach(btn=>btn.onclick=()=>openOwnerBusinessDetails(btn.dataset.ownerAttentionOpen));
+}
+
 async function loadOwnerBusinesses(){
   const snap=await getDocs(collection(db,"businesses"));
   ownerBusinesses=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
@@ -537,6 +650,7 @@ function showOwnerApp(){
   $("ownerDisplayName").textContent=currentPlatformAdmin.displayName||currentUser.displayName||"Silverforge Owner";
   $("ownerEmail").textContent=currentUser.email||currentPlatformAdmin.email||"";
   renderOwnerDashboard();
+  switchOwnerView("overview");
 }
 
 function timestampToDate(value){
@@ -588,6 +702,11 @@ function renderOwnerDashboard(){
   $("ownerStatActiveSub").textContent=ownerBusinesses.length?`${Math.round((active/ownerBusinesses.length)*100)}% of businesses`:"No customers yet";
   $("ownerStatRevenueSub").textContent=`$0.99 × ${active} active account${active===1?"":"s"}`;
 
+  $("ownerRevenueCurrent").textContent=`$${mrr.toFixed(2)}`;
+  renderOwnerGrowthChart();
+  renderOwnerTopTools();
+  renderOwnerNewestBusinesses();
+  renderOwnerAttention();
   renderOwnerTools();
   renderOwnerBusinesses();
 }
