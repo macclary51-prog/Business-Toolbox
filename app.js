@@ -7,7 +7,15 @@ import {
   getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc,
   getDocs, deleteDoc, serverTimestamp, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDACoQU74FIxuCApDJxQUP-rcXhsDIorAs",
+  authDomain: "business-toolbox-c938a.firebaseapp.com",
+  projectId: "business-toolbox-c938a",
+  storageBucket: "business-toolbox-c938a.firebasestorage.app",
+  messagingSenderId: "353839785877",
+  appId: "1:353839785877:web:b35f3d7fb738848edd389c",
+  measurementId: "G-RBGXYYGTQ9"
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -18,6 +26,13 @@ const db = getFirestore(app);
 const employeeCreatorApp = initializeApp(firebaseConfig,"businessToolboxEmployeeCreator");
 const employeeCreatorAuth = getAuth(employeeCreatorApp);
 const $ = (id) => document.getElementById(id);
+
+window.addEventListener("error",event=>{
+  console.error("Business Toolbox startup/runtime error:",event.error||event.message);
+});
+window.addEventListener("unhandledrejection",event=>{
+  console.error("Business Toolbox unhandled promise rejection:",event.reason);
+});
 
 const toolDefinitions = [
   {
