@@ -1058,3 +1058,109 @@ body.owner-previewing-public{padding-bottom:92px}
   .owner-preview-unique-fields{grid-template-columns:1fr}
   .owner-preview-unique-fields>label.field-wide{grid-column:auto}
 }
+
+
+/* REAL OWNER WORKSPACE PREVIEWS */
+.owner-workspace-preview-modal{
+  width:min(1320px,98vw);
+  max-height:94vh;
+}
+.owner-preview-tabs{
+  display:flex;
+  gap:7px;
+  margin-top:17px;
+  padding:6px;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:#081524;
+  width:max-content;
+  max-width:100%;
+}
+.owner-preview-tab{
+  appearance:none;
+  border:0;
+  padding:8px 12px;
+  border-radius:8px;
+  background:transparent;
+  color:#91a7c0;
+  font:inherit;
+  font-size:.72rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.owner-preview-tab.active{
+  background:#173251;
+  color:#f2f7fd;
+  box-shadow:0 0 0 1px rgba(111,168,238,.18) inset;
+}
+.owner-preview-tab-panel{
+  margin-top:13px;
+}
+.owner-workspace-preview-topbar{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:center;
+  padding:13px 15px;
+  border:1px solid var(--line);
+  border-radius:12px 12px 0 0;
+  background:#0b1a2d;
+}
+.owner-workspace-preview-topbar small{
+  display:block;
+  color:#8095ae;
+  font-size:.61rem;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.owner-workspace-preview-topbar strong{
+  display:block;
+  margin-top:4px;
+  font-size:.86rem;
+}
+.owner-workspace-preview-topbar span{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.66rem;
+}
+.owner-mock-workspace-stats{
+  margin-top:10px;
+}
+.owner-workspace-preview-stage{
+  margin-top:10px;
+  min-height:360px;
+  max-height:56vh;
+  overflow:auto;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#071421;
+}
+.owner-workspace-preview-stage .record-actions button{
+  pointer-events:none;
+}
+.owner-workspace-preview-stage .tool-empty{
+  min-height:auto;
+}
+.owner-preview-setup-layout{
+  grid-template-columns:minmax(0,1fr) minmax(300px,.75fr);
+}
+#ownerPreviewFormPanel{
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#09182a;
+}
+#ownerPreviewFormPanel .owner-preview-form{
+  margin-top:12px;
+}
+@media(max-width:850px){
+  .owner-preview-tabs{width:100%}
+  .owner-preview-tab{flex:1}
+  .owner-preview-setup-layout{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .owner-preview-tabs{flex-direction:column}
+  .owner-workspace-preview-topbar{align-items:stretch;flex-direction:column}
+}
