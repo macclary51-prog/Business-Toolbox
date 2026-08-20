@@ -969,3 +969,92 @@ body.owner-previewing-public{padding-bottom:92px}
   .subscription-row,.document-row,.supply-row{grid-template-columns:1fr}
   .employee-directory-grid,.vendor-directory-grid,.asset-inventory-grid,.fleet-grid,.warranty-grid{grid-template-columns:1fr}
 }
+
+
+/* OWNER PREVIEW NOW MATCHES UNIQUE TOOL EXPERIENCES */
+.owner-preview-unique-form{
+  display:grid!important;
+  gap:10px!important;
+}
+.owner-preview-workflow-banner{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:12px;
+  border:1px solid rgba(91,157,236,.3);
+  border-radius:11px;
+  background:rgba(55,118,199,.08);
+}
+.owner-preview-workflow-banner small{
+  display:block;
+  color:#7e97b5;
+  font-size:.6rem;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.owner-preview-workflow-banner strong{
+  display:block;
+  margin-top:4px;
+  font-size:.77rem;
+}
+.owner-preview-workflow-banner span{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:.66rem;
+  line-height:1.45;
+}
+.owner-preview-unique-section{
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#0a182a;
+}
+.owner-preview-unique-section-head{
+  margin-bottom:9px;
+  padding-bottom:7px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.owner-preview-unique-section-head strong{
+  display:block;
+  font-size:.73rem;
+}
+.owner-preview-unique-section-head span{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.62rem;
+}
+.owner-preview-unique-fields{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.owner-preview-unique-fields>label.field-wide{
+  grid-column:1/-1;
+}
+.owner-preview-workflow-config{
+  padding:8px 9px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#0c1b2e;
+}
+.owner-preview-workflow-config strong{
+  display:block;
+  font-size:.68rem;
+}
+.owner-preview-workflow-config span{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.61rem;
+  line-height:1.4;
+}
+.owner-preview-workflow-config.highlight{
+  border-color:rgba(91,157,236,.28);
+  background:rgba(55,118,199,.08);
+}
+@media(max-width:720px){
+  .owner-preview-unique-fields{grid-template-columns:1fr}
+  .owner-preview-unique-fields>label.field-wide{grid-column:auto}
+}
