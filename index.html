@@ -943,7 +943,7 @@
 
 
   <div class="modal-backdrop hidden" id="ownerToolPreviewModal" role="dialog" aria-modal="true" aria-labelledby="ownerToolPreviewTitle">
-    <div class="modal owner-tool-preview-modal">
+    <div class="modal owner-tool-preview-modal owner-workspace-preview-modal">
       <button class="modal-close" data-close-owner-tool-preview aria-label="Close">×</button>
 
       <div class="owner-tool-preview-header">
@@ -956,64 +956,56 @@
       </div>
 
       <div class="owner-tool-preview-meta">
-        <div>
-          <span>Form Purpose</span>
-          <strong id="ownerToolPreviewHelper">—</strong>
-        </div>
-        <div>
-          <span>Date Field</span>
-          <strong id="ownerToolPreviewDueLabel">—</strong>
-        </div>
-        <div>
-          <span>Status Choices</span>
-          <strong id="ownerToolPreviewStatusCount">0</strong>
-        </div>
-        <div>
-          <span>Form Fields</span>
-          <strong id="ownerToolPreviewFieldCount">0</strong>
-        </div>
+        <div><span>Customer Workspace</span><strong id="ownerToolPreviewHelper">—</strong></div>
+        <div><span>Primary Date</span><strong id="ownerToolPreviewDueLabel">—</strong></div>
+        <div><span>Status Choices</span><strong id="ownerToolPreviewStatusCount">0</strong></div>
+        <div><span>Tracked Fields</span><strong id="ownerToolPreviewFieldCount">0</strong></div>
       </div>
 
-      <div class="owner-tool-preview-layout">
-        <section class="owner-tool-preview-section">
-          <div class="owner-detail-section-heading">
-            <h3>Customer Form Preview</h3>
-            <span>Preview only — nothing will be saved</span>
-          </div>
-
-          <div class="owner-preview-form">
-            <label>
-              Tool
-              <input class="input" id="ownerPreviewToolName" disabled />
-            </label>
-
-            <div class="dynamic-fields owner-preview-dynamic-fields" id="ownerToolPreviewFields"></div>
-
-            <label>
-              Status
-              <select class="input" id="ownerToolPreviewStatus" disabled></select>
-            </label>
-
-            <label id="ownerToolPreviewDueField">
-              Due Date
-              <input class="input" type="date" disabled />
-            </label>
-
-            <label>
-              Notes
-              <textarea class="input textarea" rows="4" disabled placeholder="Additional business notes..."></textarea>
-            </label>
-          </div>
-        </section>
-
-        <aside class="owner-tool-preview-section">
-          <h3>How This Tool Is Set Up</h3>
-          <div class="owner-tool-config-list" id="ownerToolConfigList"></div>
-
-          <h3 class="owner-preview-subheading">What It Covers</h3>
-          <ul class="owner-tool-preview-bullets" id="ownerToolPreviewBullets"></ul>
-        </aside>
+      <div class="owner-preview-tabs">
+        <button class="owner-preview-tab active" type="button" data-owner-preview-tab="workspace">Workspace</button>
+        <button class="owner-preview-tab" type="button" data-owner-preview-tab="form">Add / Edit Form</button>
+        <button class="owner-preview-tab" type="button" data-owner-preview-tab="setup">Setup</button>
       </div>
+
+      <section class="owner-preview-tab-panel" id="ownerPreviewWorkspacePanel">
+        <div class="owner-workspace-preview-topbar">
+          <div>
+            <small>SIMULATED CUSTOMER VIEW</small>
+            <strong id="ownerWorkspacePreviewName">Tool Workspace</strong>
+            <span>Sample data only — nothing here is saved or changed.</span>
+          </div>
+          <button class="btn btn-primary" type="button" disabled id="ownerWorkspacePreviewAddBtn">+ Add</button>
+        </div>
+        <div class="tool-workspace-stats owner-mock-workspace-stats" id="ownerWorkspacePreviewStats"></div>
+        <div class="owner-workspace-preview-stage" id="ownerWorkspacePreviewStage" inert></div>
+      </section>
+
+      <section class="owner-preview-tab-panel hidden" id="ownerPreviewFormPanel">
+        <div class="owner-detail-section-heading">
+          <div><h3>Add / Edit Form</h3><span>This is only the data-entry screen for this tool.</span></div>
+        </div>
+        <div class="owner-preview-form">
+          <label>Tool<input class="input" id="ownerPreviewToolName" disabled /></label>
+          <div class="dynamic-fields owner-preview-dynamic-fields" id="ownerToolPreviewFields"></div>
+          <label>Status<select class="input" id="ownerToolPreviewStatus" disabled></select></label>
+          <label id="ownerToolPreviewDueField">Due Date<input class="input" type="date" disabled /></label>
+          <label>Notes<textarea class="input textarea" rows="4" disabled placeholder="Additional business notes..."></textarea></label>
+        </div>
+      </section>
+
+      <section class="owner-preview-tab-panel hidden" id="ownerPreviewSetupPanel">
+        <div class="owner-tool-preview-layout owner-preview-setup-layout">
+          <section class="owner-tool-preview-section">
+            <h3>How This Tool Is Set Up</h3>
+            <div class="owner-tool-config-list" id="ownerToolConfigList"></div>
+          </section>
+          <aside class="owner-tool-preview-section">
+            <h3>What It Covers</h3>
+            <ul class="owner-tool-preview-bullets" id="ownerToolPreviewBullets"></ul>
+          </aside>
+        </div>
+      </section>
     </div>
   </div>
 
