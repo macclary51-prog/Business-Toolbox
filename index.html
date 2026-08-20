@@ -214,7 +214,10 @@
       <a class="brand sidebar-brand" href="#"><span class="brand-mark">SF</span><span class="brand-text">Silverforge <strong>Owner Console</strong></span></a>
       <div class="business-block"><small>PLATFORM OWNER</small><strong id="ownerDisplayName">Silverforge Owner</strong><span id="ownerEmail"></span></div>
       <nav class="sidebar-nav">
-        <button class="side-link active"><span>⌂</span> Platform Overview</button>
+        <button class="side-link active" data-owner-view="overview"><span>⌂</span> Platform Overview</button>
+        <button class="side-link" data-owner-view="businesses"><span>▦</span> Businesses</button>
+        <button class="side-link" data-owner-view="tools"><span>◇</span> Tool Usage</button>
+        <button class="side-link" data-owner-view="attention"><span>!</span> Needs Attention</button>
       </nav>
       <button class="btn btn-ghost sidebar-logout" id="ownerLogoutBtn">Log Out</button>
     </aside>
@@ -225,90 +228,166 @@
       </header>
       <div class="app-content">
         <section class="owner-dashboard">
-          <div class="owner-overview-heading">
-            <div>
-              <span class="eyebrow">PLATFORM HEALTH</span>
-              <h1>Owner Overview</h1>
-              <p>Monitor customers, revenue, account status, tool adoption and recent platform activity.</p>
-            </div>
-            <div class="owner-overview-actions">
-              <button class="btn btn-secondary" id="ownerRefreshBtn">Refresh Data</button>
-            </div>
-          </div>
-
-          <div class="stats-grid owner-stats owner-stats-primary">
-            <article class="stat-card"><span>Total Businesses</span><strong id="ownerStatBusinesses">0</strong><small id="ownerStatBusinessesSub">All customer accounts</small></article>
-            <article class="stat-card"><span>Active Subscriptions</span><strong id="ownerStatActive">0</strong><small id="ownerStatActiveSub">Paying accounts</small></article>
-            <article class="stat-card"><span>Monthly Revenue</span><strong id="ownerStatRevenue">$0.00</strong><small id="ownerStatRevenueSub">$0.99 per active account</small></article>
-            <article class="stat-card"><span>Annual Projection</span><strong id="ownerStatAnnual">$0.00</strong><small>Based on current active accounts</small></article>
-          </div>
-
-          <div class="owner-health-grid">
-            <article class="panel owner-health-card">
-              <div class="panel-heading"><div><small>SUBSCRIPTIONS</small><h3>Account Breakdown</h3></div></div>
-              <div class="owner-breakdown-grid">
-                <div><span>Setup Required</span><strong id="ownerStatSetup">0</strong></div>
-                <div><span>Past Due</span><strong id="ownerStatPastDue">0</strong></div>
-                <div><span>Canceled</span><strong id="ownerStatCanceled">0</strong></div>
-                <div><span>Suspended</span><strong id="ownerStatSuspended">0</strong></div>
-              </div>
-            </article>
-
-            <article class="panel owner-health-card">
-              <div class="panel-heading"><div><small>GROWTH</small><h3>Recent Signups</h3></div></div>
-              <div class="owner-breakdown-grid">
-                <div><span>Last 7 Days</span><strong id="ownerStat7Days">0</strong></div>
-                <div><span>Last 30 Days</span><strong id="ownerStat30Days">0</strong></div>
-                <div><span>This Month</span><strong id="ownerStatThisMonth">0</strong></div>
-                <div><span>Average Tools Enabled</span><strong id="ownerStatAvgTools">0</strong></div>
-              </div>
-            </article>
-          </div>
-
-          <article class="panel owner-tools-panel">
-            <div class="panel-heading owner-panel-heading">
+          <section class="owner-console-view" id="ownerOverviewView">
+            <div class="owner-overview-heading">
               <div>
-                <small>PLATFORM TOOLS</small>
-                <h3>Business Toolbox Modules</h3>
-                <p class="owner-result-count" id="ownerToolSummary">0 tools</p>
+                <span class="eyebrow">PLATFORM HEALTH</span>
+                <h1>Owner Overview</h1>
+                <p>Monitor growth, revenue, account health and customer activity across the Business Toolbox platform.</p>
               </div>
-              <input class="input owner-search" id="ownerToolSearch" type="search" placeholder="Search tools..." />
+              <div class="owner-overview-actions">
+                <button class="btn btn-secondary" id="ownerRefreshBtn">Refresh Data</button>
+              </div>
             </div>
-            <p class="panel-copy">Review every tool available to customer businesses and see how widely each module is being used.</p>
-            <div class="owner-tools-grid" id="ownerToolsGrid"></div>
-          </article>
 
-          <article class="panel owner-business-panel">
-            <div class="panel-heading owner-panel-heading">
+            <div class="stats-grid owner-stats owner-stats-primary">
+              <article class="stat-card"><span>Total Businesses</span><strong id="ownerStatBusinesses">0</strong><small id="ownerStatBusinessesSub">All customer accounts</small></article>
+              <article class="stat-card"><span>Active Subscriptions</span><strong id="ownerStatActive">0</strong><small id="ownerStatActiveSub">Paying accounts</small></article>
+              <article class="stat-card"><span>Monthly Revenue</span><strong id="ownerStatRevenue">$0.00</strong><small id="ownerStatRevenueSub">$0.99 per active account</small></article>
+              <article class="stat-card"><span>Annual Projection</span><strong id="ownerStatAnnual">$0.00</strong><small>Based on current active accounts</small></article>
+            </div>
+
+            <div class="owner-health-grid">
+              <article class="panel owner-health-card">
+                <div class="panel-heading"><div><small>SUBSCRIPTIONS</small><h3>Account Breakdown</h3></div></div>
+                <div class="owner-breakdown-grid">
+                  <div><span>Setup Required</span><strong id="ownerStatSetup">0</strong></div>
+                  <div><span>Past Due</span><strong id="ownerStatPastDue">0</strong></div>
+                  <div><span>Canceled</span><strong id="ownerStatCanceled">0</strong></div>
+                  <div><span>Suspended</span><strong id="ownerStatSuspended">0</strong></div>
+                </div>
+              </article>
+
+              <article class="panel owner-health-card">
+                <div class="panel-heading"><div><small>GROWTH</small><h3>Recent Signups</h3></div></div>
+                <div class="owner-breakdown-grid">
+                  <div><span>Last 7 Days</span><strong id="ownerStat7Days">0</strong></div>
+                  <div><span>Last 30 Days</span><strong id="ownerStat30Days">0</strong></div>
+                  <div><span>This Month</span><strong id="ownerStatThisMonth">0</strong></div>
+                  <div><span>Average Tools Enabled</span><strong id="ownerStatAvgTools">0</strong></div>
+                </div>
+              </article>
+            </div>
+
+            <div class="owner-overview-grid">
+              <article class="panel">
+                <div class="panel-heading"><div><small>GROWTH TREND</small><h3>Business Signups</h3></div></div>
+                <div class="owner-growth-chart" id="ownerGrowthChart"></div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading"><div><small>REVENUE TARGETS</small><h3>Recurring Revenue</h3></div></div>
+                <div class="owner-revenue-goals">
+                  <div><span>Current MRR</span><strong id="ownerRevenueCurrent">$0.00</strong></div>
+                  <div><span>At 100 Customers</span><strong>$99.00</strong></div>
+                  <div><span>At 500 Customers</span><strong>$495.00</strong></div>
+                  <div><span>At 1,000 Customers</span><strong>$990.00</strong></div>
+                </div>
+              </article>
+            </div>
+
+            <div class="owner-overview-grid">
+              <article class="panel">
+                <div class="panel-heading"><div><small>POPULARITY</small><h3>Top Tools</h3></div><button class="text-btn" data-owner-jump="tools">See All</button></div>
+                <div class="owner-top-tools" id="ownerTopTools"></div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading"><div><small>RECENT</small><h3>Newest Businesses</h3></div><button class="text-btn" data-owner-jump="businesses">Manage</button></div>
+                <div class="owner-new-businesses" id="ownerNewestBusinesses"></div>
+              </article>
+            </div>
+
+            <article class="panel owner-alert-panel">
+              <div class="panel-heading"><div><small>ATTENTION</small><h3>Accounts That Need Attention</h3></div><button class="text-btn" data-owner-jump="attention">View All</button></div>
+              <div class="owner-attention-list" id="ownerAttentionPreview"></div>
+            </article>
+          </section>
+
+          <section class="owner-console-view hidden" id="ownerBusinessesView">
+            <div class="owner-overview-heading">
               <div>
-                <small>CUSTOMERS</small>
-                <h3>Business Accounts</h3>
-                <p class="owner-result-count" id="ownerResultCount">0 businesses</p>
-              </div>
-              <div class="owner-filter-bar">
-                <input class="input owner-search" id="ownerBusinessSearch" type="search" placeholder="Search business, owner, website..." />
-                <select class="input" id="ownerSubscriptionFilter">
-                  <option value="all">All subscriptions</option>
-                  <option value="active">Active</option>
-                  <option value="setup_required">Setup required</option>
-                  <option value="past_due">Past due</option>
-                  <option value="canceled">Canceled</option>
-                </select>
-                <select class="input" id="ownerAccessFilter">
-                  <option value="all">All access</option>
-                  <option value="active">Active access</option>
-                  <option value="suspended">Suspended</option>
-                </select>
+                <span class="eyebrow">CUSTOMER MANAGEMENT</span>
+                <h1>Businesses</h1>
+                <p>Search, filter, inspect and manage every business account on the platform.</p>
               </div>
             </div>
-            <p class="panel-copy">View detailed customer information, manage subscription state, control platform access and inspect toolbox usage.</p>
-            <div class="owner-business-list" id="ownerBusinessList"></div>
-          </article>
+
+            <article class="panel owner-business-panel">
+              <div class="panel-heading owner-panel-heading">
+                <div>
+                  <small>CUSTOMERS</small>
+                  <h3>Business Accounts</h3>
+                  <p class="owner-result-count" id="ownerResultCount">0 businesses</p>
+                </div>
+                <div class="owner-filter-bar">
+                  <input class="input owner-search" id="ownerBusinessSearch" type="search" placeholder="Search business, owner, website..." />
+                  <select class="input" id="ownerSubscriptionFilter">
+                    <option value="all">All subscriptions</option>
+                    <option value="active">Active</option>
+                    <option value="setup_required">Setup required</option>
+                    <option value="past_due">Past due</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                  <select class="input" id="ownerAccessFilter">
+                    <option value="all">All access</option>
+                    <option value="active">Active access</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+              <p class="panel-copy">View detailed customer information, manage subscription state, control platform access and inspect toolbox usage.</p>
+              <div class="owner-business-list" id="ownerBusinessList"></div>
+            </article>
+          </section>
+
+          <section class="owner-console-view hidden" id="ownerToolsView">
+            <div class="owner-overview-heading">
+              <div>
+                <span class="eyebrow">PLATFORM TOOLS</span>
+                <h1>Tool Usage</h1>
+                <p>See which modules businesses actually use and preview exactly how each customer form is configured.</p>
+              </div>
+            </div>
+
+            <article class="panel owner-tools-panel">
+              <div class="panel-heading owner-panel-heading">
+                <div>
+                  <small>BUSINESS TOOLBOX</small>
+                  <h3>All Modules</h3>
+                  <p class="owner-result-count" id="ownerToolSummary">0 tools</p>
+                </div>
+                <input class="input owner-search" id="ownerToolSearch" type="search" placeholder="Search tools..." />
+              </div>
+              <div class="owner-tools-grid" id="ownerToolsGrid"></div>
+            </article>
+          </section>
+
+          <section class="owner-console-view hidden" id="ownerAttentionView">
+            <div class="owner-overview-heading">
+              <div>
+                <span class="eyebrow">ACCOUNT HEALTH</span>
+                <h1>Needs Attention</h1>
+                <p>Focus on setup-required, past-due, canceled and suspended accounts.</p>
+              </div>
+            </div>
+
+            <div class="stats-grid owner-attention-stats">
+              <article class="stat-card"><span>Setup Required</span><strong id="ownerAttentionSetup">0</strong></article>
+              <article class="stat-card"><span>Past Due</span><strong id="ownerAttentionPastDue">0</strong></article>
+              <article class="stat-card"><span>Canceled</span><strong id="ownerAttentionCanceled">0</strong></article>
+              <article class="stat-card"><span>Suspended</span><strong id="ownerAttentionSuspended">0</strong></article>
+            </div>
+
+            <article class="panel">
+              <div class="panel-heading"><div><small>FOLLOW-UP</small><h3>Accounts Requiring Action</h3></div></div>
+              <div class="owner-attention-list" id="ownerAttentionList"></div>
+            </article>
+          </section>
         </section>
       </div>
     </div>
   </section>
-
 
   <div class="modal-backdrop hidden" id="ownerBusinessModal" role="dialog" aria-modal="true" aria-labelledby="ownerBusinessModalTitle">
     <div class="modal owner-detail-modal">
