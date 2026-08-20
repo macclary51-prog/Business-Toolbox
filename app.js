@@ -2843,7 +2843,7 @@ function renderAssetInventory(items){
   </article>`).join("")}</div>`;
 }
 function renderServiceTimeline(items){
-  const sorted=items.slice().sort((a,b)=>String(valueOf(b,"lastService","")).localeCompare(String(valueOf(a,"lastService","")));
+  const sorted=items.slice().sort((a,b)=>String(valueOf(b,"lastService","")).localeCompare(String(valueOf(a,"lastService",""))));
   return `<div class="service-timeline">${sorted.map(r=>`<article class="service-entry">
     <div class="service-date">${safeText(shortDate(valueOf(r,"lastService",r.dueDate||"")))}</div>
     <div><h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"asset","Unlinked asset"))} • ${safeText(valueOf(r,"serviceType","Service"))}</p><div class="record-meta">${valueOf(r,"cost","")?`<span class="tag">$${safeText(valueOf(r,"cost"))}</span>`:""}${valueOf(r,"provider","")?`<span class="tag">${safeText(valueOf(r,"provider"))}</span>`:""}${r.dueDate?`<span class="tag">Next ${safeText(shortDate(r.dueDate))}</span>`:""}</div></div>
@@ -2877,7 +2877,7 @@ function renderCheckoutDesk(items){
   return `<div class="checkout-desk"><section class="checkout-active"><div class="panel-heading"><div><small>OUT NOW</small><h3>Currently Checked Out</h3></div></div>${list(active,"No assets currently checked out.")}</section><section class="checkout-returned"><div class="panel-heading"><div><small>RETURNED</small><h3>Recent Returns</h3></div></div>${list(returned.slice(0,8),"No returned assets yet.")}</section></div>`;
 }
 function renderLogbookTimeline(items){
-  const sorted=items.slice().sort((a,b)=>String(valueOf(b,"logDate","")).localeCompare(String(valueOf(a,"logDate","")));
+  const sorted=items.slice().sort((a,b)=>String(valueOf(b,"logDate","")).localeCompare(String(valueOf(a,"logDate",""))));
   return `<div class="logbook-timeline">${sorted.map(r=>`<article class="logbook-entry"><div class="logbook-date">${safeText(shortDate(valueOf(r,"logDate","")))}</div><div><h4>${safeText(r.title)}</h4><p>${safeText(r.details||valueOf(r,"nextAction",""))}</p><div class="record-meta"><span class="tag">${safeText(valueOf(r,"shift","Any shift"))}</span><span class="tag">${safeText(valueOf(r,"issueFlag","Routine"))}</span></div></div>${workspaceActionHtml(r)}</article>`).join("")}</div>`;
 }
 function renderEmployeeDirectory(items){
