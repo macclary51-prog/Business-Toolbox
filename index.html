@@ -302,6 +302,46 @@
               <div class="panel-heading"><div><small>ATTENTION</small><h3>Accounts That Need Attention</h3></div><button class="text-btn" data-owner-jump="attention">View All</button></div>
               <div class="owner-attention-list" id="ownerAttentionPreview"></div>
             </article>
+
+            <article class="panel owner-tools-panel owner-restored-panel">
+              <div class="panel-heading owner-panel-heading">
+                <div>
+                  <small>PLATFORM TOOLS</small>
+                  <h3>Business Toolbox Modules</h3>
+                  <p class="owner-result-count" id="ownerOverviewToolSummary">0 tools</p>
+                </div>
+                <input class="input owner-search" id="ownerOverviewToolSearch" type="search" placeholder="Search tools..." />
+              </div>
+              <p class="panel-copy">Every module available to customer businesses. Click a tool to inspect its full customer form and setup.</p>
+              <div class="owner-tools-grid" id="ownerOverviewToolsGrid"></div>
+            </article>
+
+            <article class="panel owner-business-panel owner-restored-panel">
+              <div class="panel-heading owner-panel-heading">
+                <div>
+                  <small>CUSTOMERS</small>
+                  <h3>Business Accounts</h3>
+                  <p class="owner-result-count" id="ownerOverviewResultCount">0 businesses</p>
+                </div>
+                <div class="owner-filter-bar">
+                  <input class="input owner-search" id="ownerOverviewBusinessSearch" type="search" placeholder="Search business, owner, website..." />
+                  <select class="input" id="ownerOverviewSubscriptionFilter">
+                    <option value="all">All subscriptions</option>
+                    <option value="active">Active</option>
+                    <option value="setup_required">Setup required</option>
+                    <option value="past_due">Past due</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                  <select class="input" id="ownerOverviewAccessFilter">
+                    <option value="all">All access</option>
+                    <option value="active">Active access</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+              <p class="panel-copy">The complete customer-management list is back on your main Owner Overview. You can still use the dedicated Businesses page too.</p>
+              <div class="owner-business-list" id="ownerOverviewBusinessList"></div>
+            </article>
           </section>
 
           <section class="owner-console-view hidden" id="ownerBusinessesView">
