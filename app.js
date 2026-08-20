@@ -532,6 +532,222 @@ function applyPlatformConfig(){
   renderFeatureDetail();
 }
 
+
+const toolExperienceConfig={
+  "tasks":{
+    mode:"taskBoard",addLabel:"+ New Task",notes:"Task Notes",
+    formIntro:"Create focused work with a clear owner, priority and schedule.",
+    sections:[
+      {title:"Task",hint:"What needs to happen?",keys:["title","priority"]},
+      {title:"Ownership & Schedule",hint:"Who owns it and does it repeat?",keys:["assignedTo","recurring"]}
+    ]
+  },
+  "checklists":{
+    mode:"checklistLibrary",addLabel:"+ New Checklist",notes:"Checklist Instructions",
+    formIntro:"Build a reusable routine, then run it as a live checklist.",
+    sections:[
+      {title:"Checklist Setup",hint:"Name the routine and decide when it is used.",keys:["title","frequency","assignedTo"]},
+      {title:"Checklist Builder",hint:"Enter one step per line.",keys:["items"]}
+    ]
+  },
+  "equipment":{
+    mode:"assetInventory",addLabel:"+ Add Equipment",notes:"Asset Notes",
+    formIntro:"Register a physical asset and keep assignment, condition and service information together.",
+    sections:[
+      {title:"Asset Identity",hint:"Identify the equipment.",keys:["title","assetNumber","serialNumber"]},
+      {title:"Current State",hint:"Where is it and who has it?",keys:["condition","assignedTo","location"]},
+      {title:"Ownership",hint:"Purchase information.",keys:["purchaseDate"]}
+    ]
+  },
+  "maintenance":{
+    mode:"serviceTimeline",addLabel:"+ Log Service",notes:"Service Notes",
+    formIntro:"Record maintenance around the asset being serviced, not just a generic entry.",
+    sections:[
+      {title:"Service Job",hint:"What was serviced and why?",keys:["title","asset","serviceType"]},
+      {title:"Service Details",hint:"When, how much and at what usage?",keys:["lastService","mileageHours","cost"]},
+      {title:"Provider",hint:"Who performed the work?",keys:["provider"]}
+    ]
+  },
+  "renewals":{
+    mode:"renewalRadar",addLabel:"+ Track Renewal",notes:"Renewal Notes",
+    formIntro:"Track the things the business cannot afford to let expire.",
+    sections:[
+      {title:"Renewal",hint:"What is expiring?",keys:["title","renewalType","provider"]},
+      {title:"Reference",hint:"Policy, license or account information.",keys:["referenceNumber","reminderDays"]}
+    ]
+  },
+  "incidents":{
+    mode:"incidentCases",addLabel:"+ Report Incident",notes:"Full Incident Narrative",
+    formIntro:"Capture an incident in sections so the report stays clear and reviewable.",
+    sections:[
+      {title:"Incident Information",hint:"What happened, where and when?",keys:["title","incidentType","incidentDateTime","location"]},
+      {title:"People",hint:"Who was involved or witnessed it?",keys:["peopleInvolved","witnesses"]},
+      {title:"Impact",hint:"Damage, injury and consequences.",keys:["damageInjury"]},
+      {title:"Follow-Up",hint:"What needs to happen next?",keys:["followUp"]}
+    ]
+  },
+  "shift-handoff":{
+    mode:"handoffFeed",addLabel:"+ Leave Handoff",notes:"Additional Handoff Notes",
+    formIntro:"Pass information from one person or shift to the next like a message, not a database row.",
+    sections:[
+      {title:"Route",hint:"Who is handing off to whom?",keys:["fromShift","toShift","priority"]},
+      {title:"Message",hint:"What does the next shift need to know?",keys:["title","handoffNotes"]}
+    ]
+  },
+  "asset-checkout":{
+    mode:"checkoutDesk",addLabel:"+ Check Out Asset",notes:"Checkout Notes",
+    formIntro:"Issue an asset to a person and track the return lifecycle.",
+    sections:[
+      {title:"Asset",hint:"What is being issued?",keys:["title","assetId","conditionOut"]},
+      {title:"Checkout",hint:"Who has it and when is it due back?",keys:["checkedOutTo","checkoutDate"]},
+      {title:"Return",hint:"Fill this when the asset comes back.",keys:["returnDate","conditionIn"]}
+    ]
+  },
+  "logbook":{
+    mode:"logbookTimeline",addLabel:"+ New Log Entry",notes:"Log Details",
+    formIntro:"Write a dated operational entry that reads like a business journal.",
+    sections:[
+      {title:"Entry",hint:"When and where did this happen?",keys:["title","logDate","shift","location"]},
+      {title:"People & Attention",hint:"Who was involved and how important is it?",keys:["people","issueFlag"]},
+      {title:"Next Step",hint:"Follow-up if needed.",keys:["nextAction"]}
+    ]
+  },
+  "employees":{
+    mode:"employeeDirectory",addLabel:"+ Add Employee Record",notes:"Internal Employee Notes",
+    formIntro:"Maintain an employee directory record separate from login/account permissions.",
+    sections:[
+      {title:"Employee Profile",hint:"Basic identity and work role.",keys:["title","role","department","employmentType"]},
+      {title:"Contact",hint:"Business contact information.",keys:["email","phone"]},
+      {title:"Employment",hint:"Key dates and emergency contact.",keys:["startDate","emergencyContact"]}
+    ]
+  },
+  "vehicles":{
+    mode:"fleetDashboard",addLabel:"+ Add Vehicle",notes:"Vehicle Notes",
+    formIntro:"Manage vehicles like a fleet with condition, driver and service visibility.",
+    sections:[
+      {title:"Vehicle Identity",hint:"Identify the unit.",keys:["title","year","makeModel","vin","plate"]},
+      {title:"Operating State",hint:"Mileage, condition and assignment.",keys:["mileage","condition","assignedTo"]}
+    ]
+  },
+  "photo-proof":{
+    mode:"proofGallery",addLabel:"+ Add Proof",notes:"Proof Notes",
+    formIntro:"Capture evidence around a job with the image/reference at the center.",
+    sections:[
+      {title:"Job Reference",hint:"What work does this proof belong to?",keys:["title","jobReference","customerName"]},
+      {title:"Proof",hint:"Type, location and capture details.",keys:["proofType","location","capturedAt","capturedBy"]},
+      {title:"Photo",hint:"Add the image URL or file reference.",keys:["photoUrl"]}
+    ]
+  },
+  "vendors":{
+    mode:"vendorDirectory",addLabel:"+ Add Vendor",notes:"Vendor Notes",
+    formIntro:"Keep supplier relationships organized like a business contact directory.",
+    sections:[
+      {title:"Vendor",hint:"Company and service.",keys:["title","service"]},
+      {title:"Primary Contact",hint:"Who do you call or email?",keys:["contactName","phone","email","website"]},
+      {title:"Account",hint:"Business terms and account reference.",keys:["accountNumber","paymentTerms"]}
+    ]
+  },
+  "subscriptions":{
+    mode:"subscriptionLedger",addLabel:"+ Add Subscription",notes:"Subscription Notes",
+    formIntro:"Track recurring services with cost and billing information front and center.",
+    sections:[
+      {title:"Service",hint:"What recurring service is this?",keys:["title","provider"]},
+      {title:"Billing",hint:"Cost and billing cycle.",keys:["cost","billingCycle","paymentMethod"]},
+      {title:"Account",hint:"Where is the subscription managed?",keys:["accountEmail","startedDate","cancelUrl"]}
+    ]
+  },
+  "documents":{
+    mode:"documentRegister",addLabel:"+ Register Document",notes:"Document Notes",
+    formIntro:"Register important business documents with ownership, reference and expiration data.",
+    sections:[
+      {title:"Document",hint:"What is the document?",keys:["title","documentType","referenceNumber"]},
+      {title:"Responsibility",hint:"Who issued it and who owns it internally?",keys:["issuedBy","responsiblePerson"]},
+      {title:"Storage & Access",hint:"Where is it and how sensitive is it?",keys:["issueDate","storageLocation","confidentiality"]}
+    ]
+  },
+  "training":{
+    mode:"trainingMatrix",addLabel:"+ Assign Training",notes:"Training Notes",
+    formIntro:"Track training against the employee and completion/renewal requirements.",
+    sections:[
+      {title:"Assignment",hint:"Who needs what training?",keys:["title","employee","requiredByRole"]},
+      {title:"Provider & Result",hint:"Who provides it and how did it go?",keys:["provider","score","certificateNumber"]},
+      {title:"Timeline",hint:"Assignment and completion dates.",keys:["assignedDate","completionDate"]}
+    ]
+  },
+  "website-monitor":{
+    mode:"websiteStatus",addLabel:"+ Add Website Check",notes:"Monitoring Notes",
+    formIntro:"Treat each website as a status monitor with check type and observed condition.",
+    sections:[
+      {title:"Website",hint:"What site or service is being watched?",keys:["title","url"]},
+      {title:"Check",hint:"What are you checking and what did you observe?",keys:["checkType","checkedAt","observedStatus","checkedBy"]},
+      {title:"Result",hint:"Describe the outage, issue or result.",keys:["responseNotes"]}
+    ]
+  },
+  "qr-assets":{
+    mode:"qrLabels",addLabel:"+ Add QR Asset",notes:"QR Asset Notes",
+    formIntro:"Prepare a label-ready asset with a destination and physical context.",
+    sections:[
+      {title:"Label Identity",hint:"What does this QR represent?",keys:["title","assetId","location"]},
+      {title:"Destination",hint:"What should the QR open or explain?",keys:["destinationUrl","instructions"]},
+      {title:"Assignment",hint:"Who owns the asset and when was the label updated?",keys:["assignedTo","lastUpdatedLabel"]}
+    ]
+  },
+  "supplies":{
+    mode:"supplyInventory",addLabel:"+ Add Supply",notes:"Supply Notes",
+    formIntro:"Track inventory around quantity and reorder levels, not just a record title.",
+    sections:[
+      {title:"Item",hint:"What is being stocked?",keys:["title","sku","unit","location"]},
+      {title:"Inventory",hint:"Current quantity and reorder threshold.",keys:["quantity","reorderLevel","urgency"]},
+      {title:"Supplier",hint:"Preferred restock source.",keys:["supplier"]}
+    ]
+  },
+  "warranties":{
+    mode:"warrantyCoverage",addLabel:"+ Add Warranty",notes:"Warranty / Claim Notes",
+    formIntro:"See what is covered, by whom, and how long coverage remains.",
+    sections:[
+      {title:"Covered Asset",hint:"Identify the product.",keys:["title","manufacturer","model","serialNumber"]},
+      {title:"Purchase",hint:"When and where was it bought?",keys:["purchaseDate","retailer"]},
+      {title:"Coverage",hint:"What kind of warranty and who handles claims?",keys:["warrantyType","claimContact"]}
+    ]
+  },
+  "complaints":{
+    mode:"complaintPipeline",addLabel:"+ New Complaint",notes:"Complaint & Resolution Notes",
+    formIntro:"Handle customer complaints like cases moving through a resolution workflow.",
+    sections:[
+      {title:"Customer Case",hint:"Who complained and how did it arrive?",keys:["title","customer","contact","receivedAt","channel"]},
+      {title:"Triage",hint:"Classify and assign the issue.",keys:["category","severity","assignedTo"]},
+      {title:"Resolution",hint:"Document the response or outcome.",keys:["resolution"]}
+    ]
+  },
+  "suggestions":{
+    mode:"ideaBoard",addLabel:"+ Submit Idea",notes:"Suggestion Notes",
+    formIntro:"Capture improvements as ideas that move from submitted to implemented.",
+    sections:[
+      {title:"Idea",hint:"What should change?",keys:["title","category","submittedBy","anonymous"]},
+      {title:"Value",hint:"Why is it worth doing?",keys:["priority","expectedBenefit","estimatedEffort"]}
+    ]
+  },
+  "visitor-log":{
+    mode:"receptionDesk",addLabel:"+ Check In Visitor",notes:"Visitor Notes",
+    formIntro:"Run reception around who is currently on site and who they are visiting.",
+    sections:[
+      {title:"Visitor",hint:"Who arrived?",keys:["title","company","phone"]},
+      {title:"Visit",hint:"Who are they seeing and why?",keys:["host","reason","badge"]},
+      {title:"Check-In / Out",hint:"Arrival and departure time.",keys:["arrival","departure"]}
+    ]
+  },
+  "package-log":{
+    mode:"packageQueue",addLabel:"+ Receive Package",notes:"Package Notes",
+    formIntro:"Track packages around recipient notification and pickup.",
+    sections:[
+      {title:"Delivery",hint:"Identify the package and carrier.",keys:["title","carrier","sender"]},
+      {title:"Recipient",hint:"Who is it for and where is it being stored?",keys:["recipient","storageLocation"]},
+      {title:"Receipt & Pickup",hint:"Who received and who picked it up?",keys:["receivedAt","receivedBy","pickedUpBy","pickupDate"]}
+    ]
+  }
+};
+function toolExperience(id){return toolExperienceConfig[id]||{mode:"list",addLabel:"+ Add",notes:"Notes",formIntro:toolById(id).desc,sections:[{title:"Details",hint:"Record details.",keys:toolById(id).fields.map(f=>f.key)}]}}
+
 function toolById(id){
   const base = toolDefinitions.find(t=>t.id===id);
   if(!base) return {id,name:id,icon:"•",category:"Other",desc:"Business record.",bullets:[],fields:[{key:"title",label:"Title",type:"text",required:true,wide:true}]};
@@ -626,6 +842,7 @@ function canAccessBusinessView(name){
   if(name==="roles")return false;
   if(name==="settings")return canManageSettings();
   if(name==="monthly")return canViewMonthly();
+  if(name==="toolWorkspace")return !!activeToolWorkspaceId&&canAccessModule(activeToolWorkspaceId);
   return ["dashboard","records"].includes(name);
 }
 
@@ -2287,9 +2504,228 @@ function renderMonthlyOverview(){
 }
 
 function enabledModules(){return accessibleModules()}
-function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot()}
+
+let activeToolWorkspaceId=null;
+function recordsForTool(id){return records.filter(r=>r.module===id)}
+function valueOf(record,key,fallback="—"){const v=record?.fields?.[key];return v===undefined||v===null||v===""?fallback:v}
+function shortDate(value){
+  if(!value)return "—";
+  const d=new Date(value.includes("T")?value:`${value}T12:00:00`);
+  return Number.isNaN(d.getTime())?value:d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+}
+function daysUntil(dateString){
+  if(!dateString)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(`${dateString}T12:00:00`);d.setHours(0,0,0,0);
+  return Number.isNaN(d.getTime())?null:Math.ceil((d-today)/86400000);
+}
+function workspaceActionHtml(r){return `<div class="record-actions">${quickActionButton(r)}<button class="mini-btn" data-view-record="${r.id}">View</button>${canEditRecords()?`<button class="mini-btn" data-edit-record="${r.id}">Edit</button>`:""}</div>`}
+function workspaceStat(label,value){return `<div class="tool-workspace-stat"><span>${safeText(label)}</span><strong>${safeText(value)}</strong></div>`}
+function renderToolWorkspace(id){
+  if(!id||!canAccessModule(id)){switchView("dashboard");return;}
+  activeToolWorkspaceId=id;
+  const t=toolById(id),cfg=toolExperience(id),items=recordsForTool(id);
+  $("toolWorkspaceIcon").textContent=t.icon;
+  $("toolWorkspaceCategory").textContent=t.category.toUpperCase();
+  $("toolWorkspaceTitle").textContent=t.name;
+  $("toolWorkspaceDescription").textContent=t.desc;
+  $("toolWorkspaceAddBtn").textContent=cfg.addLabel;
+  $("toolWorkspaceAddBtn").classList.toggle("hidden",!canCreateRecords());
+
+  const complete=items.filter(completedStatus).length;
+  const overdue=items.filter(r=>recordDueHealth(r).key==="overdue").length;
+  const dueSoon=items.filter(r=>recordDueHealth(r).key==="soon").length;
+  $("toolWorkspaceStats").innerHTML=[
+    workspaceStat("Total",items.length),
+    workspaceStat("Active",items.length-complete),
+    workspaceStat("Due / Attention",overdue+dueSoon),
+    workspaceStat("Completed",complete)
+  ].join("");
+
+  $("toolWorkspaceContent").innerHTML=renderToolWorkspaceContent(id,items,cfg);
+  bindRecordActions();
+}
+function renderToolWorkspaceContent(id,items,cfg){
+  if(!items.length)return `<div class="tool-empty">No ${safeText(toolById(id).name.toLowerCase())} records yet. Use <strong>${safeText(cfg.addLabel)}</strong> to start.</div>`;
+  switch(cfg.mode){
+    case "taskBoard": return renderTaskBoard(items);
+    case "checklistLibrary": return renderChecklistLibrary(items);
+    case "assetInventory": return renderAssetInventory(items);
+    case "serviceTimeline": return renderServiceTimeline(items);
+    case "renewalRadar": return renderRenewalRadar(items);
+    case "incidentCases": return renderIncidentCases(items);
+    case "handoffFeed": return renderHandoffFeed(items);
+    case "checkoutDesk": return renderCheckoutDesk(items);
+    case "logbookTimeline": return renderLogbookTimeline(items);
+    case "employeeDirectory": return renderEmployeeDirectory(items);
+    case "fleetDashboard": return renderFleetDashboard(items);
+    case "proofGallery": return renderProofGallery(items);
+    case "vendorDirectory": return renderVendorDirectory(items);
+    case "subscriptionLedger": return renderSubscriptionLedger(items);
+    case "documentRegister": return renderDocumentRegister(items);
+    case "trainingMatrix": return renderTrainingMatrix(items);
+    case "websiteStatus": return renderWebsiteStatus(items);
+    case "qrLabels": return renderQrLabels(items);
+    case "supplyInventory": return renderSupplyInventory(items);
+    case "warrantyCoverage": return renderWarrantyCoverage(items);
+    case "complaintPipeline": return renderComplaintPipeline(items);
+    case "ideaBoard": return renderIdeaBoard(items);
+    case "receptionDesk": return renderReceptionDesk(items);
+    case "packageQueue": return renderPackageQueue(items);
+    default: return `<div class="record-list">${items.map(recordHtml).join("")}</div>`;
+  }
+}
+function renderTaskBoard(items){
+  const groups=[
+    ["Open",items.filter(r=>["open","ready"].includes(String(r.status||"").toLowerCase()))],
+    ["In Progress",items.filter(r=>["in progress","acknowledged"].includes(String(r.status||"").toLowerCase()))],
+    ["Complete",items.filter(completedStatus)]
+  ];
+  const known=new Set(groups.flatMap(g=>g[1].map(r=>r.id)));
+  groups[0][1].push(...items.filter(r=>!known.has(r.id)));
+  return `<div class="task-board">${groups.map(([label,rows])=>`<section class="task-column">
+    <div class="task-column-head"><strong>${label}</strong><span>${rows.length}</span></div>
+    <div class="task-column-body">${rows.length?rows.map(r=>`<article class="task-work-card">
+      <h4>${safeText(r.title||"Untitled Task")}</h4>
+      <div class="task-card-meta"><span class="task-priority ${String(valueOf(r,"priority","")).toLowerCase()}">${safeText(valueOf(r,"priority","Normal"))}</span>${valueOf(r,"assignedTo","")?`<span class="tag">${safeText(valueOf(r,"assignedTo",""))}</span>`:""}${r.dueDate?`<span class="tag">${safeText(shortDate(r.dueDate))}</span>`:""}</div>
+      ${workspaceActionHtml(r)}
+    </article>`).join(""):'<div class="tool-empty">Nothing here.</div>'}</div>
+  </section>`).join("")}</div>`;
+}
+function renderChecklistLibrary(items){
+  return `<div class="checklist-library">${items.map(r=>{
+    const list=String(valueOf(r,"items","")).split("\n").map(x=>x.trim()).filter(Boolean);
+    const checked=new Set(parseCheckedItems(r)),pct=list.length?Math.round(checked.size/list.length*100):0;
+    return `<article class="checklist-library-card"><div class="record-meta"><span class="tag">${safeText(valueOf(r,"frequency","As Needed"))}</span><span class="tag">${pct}% complete</span></div>
+      <h4>${safeText(r.title)}</h4>
+      <div class="checklist-preview-items">${list.slice(0,4).map((x,i)=>`<span><i>${checked.has(i)?"✓":"○"}</i>${safeText(x)}</span>`).join("")}${list.length>4?`<span>+ ${list.length-4} more steps</span>`:""}</div>
+      <div class="mini-progress-track"><div class="mini-progress-fill" style="width:${pct}%"></div></div>
+      <div class="record-actions" style="margin-top:10px">${quickActionButton(r)}<button class="mini-btn" data-view-record="${r.id}">View</button>${canEditRecords()?`<button class="mini-btn" data-edit-record="${r.id}">Edit Builder</button>`:""}</div>
+    </article>`;
+  }).join("")}</div>`;
+}
+function renderAssetInventory(items){
+  return `<div class="asset-inventory-grid">${items.map(r=>`<article class="asset-card">
+    <div class="asset-card-head"><div><small>${safeText(valueOf(r,"assetNumber","NO ASSET #"))}</small><h4>${safeText(r.title)}</h4></div><span class="owner-status ${ownerStatusClass(r.status||"")}">${safeText(r.status||"")}</span></div>
+    <div class="asset-data-grid"><div><span>Condition</span><strong>${safeText(valueOf(r,"condition"))}</strong></div><div><span>Assigned To</span><strong>${safeText(valueOf(r,"assignedTo","Unassigned"))}</strong></div><div><span>Location</span><strong>${safeText(valueOf(r,"location"))}</strong></div><div><span>Serial</span><strong>${safeText(valueOf(r,"serialNumber"))}</strong></div></div>
+    ${workspaceActionHtml(r)}
+  </article>`).join("")}</div>`;
+}
+function renderServiceTimeline(items){
+  const sorted=items.slice().sort((a,b)=>String(valueOf(b,"lastService","")).localeCompare(String(valueOf(a,"lastService","")));
+  return `<div class="service-timeline">${sorted.map(r=>`<article class="service-entry">
+    <div class="service-date">${safeText(shortDate(valueOf(r,"lastService",r.dueDate||"")))}</div>
+    <div><h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"asset","Unlinked asset"))} • ${safeText(valueOf(r,"serviceType","Service"))}</p><div class="record-meta">${valueOf(r,"cost","")?`<span class="tag">$${safeText(valueOf(r,"cost"))}</span>`:""}${valueOf(r,"provider","")?`<span class="tag">${safeText(valueOf(r,"provider"))}</span>`:""}${r.dueDate?`<span class="tag">Next ${safeText(shortDate(r.dueDate))}</span>`:""}</div></div>
+    ${workspaceActionHtml(r)}
+  </article>`).join("")}</div>`;
+}
+function renderRenewalRadar(items){
+  const sorted=items.slice().sort((a,b)=>(daysUntil(a.dueDate)??99999)-(daysUntil(b.dueDate)??99999));
+  return `<div class="renewal-radar">${sorted.map(r=>{
+    const d=daysUntil(r.dueDate),pct=d===null?100:Math.max(2,Math.min(100,d/365*100)),cls=d!==null&&d<0?"danger":d!==null&&d<=30?"warn":"";
+    const label=d===null?"No expiration":d<0?`${Math.abs(d)} days expired`:d===0?"Expires today":`${d} days remaining`;
+    return `<div class="renewal-row"><div><strong>${safeText(r.title)}</strong><span>${safeText(valueOf(r,"renewalType","Renewal"))} • ${safeText(valueOf(r,"provider","No provider"))}</span></div><div><div class="expiry-days ${cls}">${safeText(label)}</div><div class="expiry-meter"><span style="width:${pct}%"></span></div></div>${workspaceActionHtml(r)}</div>`;
+  }).join("")}</div>`;
+}
+function renderIncidentCases(items){
+  return `<div class="incident-case-list">${items.map(r=>`<article class="case-card">
+    <span class="case-severity ${String(valueOf(r,"incidentType","")).toLowerCase().replaceAll(" ","-")}"></span>
+    <div><div class="record-meta"><span class="tag">${safeText(valueOf(r,"incidentType","Incident"))}</span><span class="tag">${safeText(r.status||"Open")}</span></div><h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"location","No location"))} • ${safeText(valueOf(r,"incidentDateTime","No date"))}</p><small>${safeText(valueOf(r,"peopleInvolved","No people listed"))}</small></div>
+    ${workspaceActionHtml(r)}
+  </article>`).join("")}</div>`;
+}
+function renderHandoffFeed(items){
+  return `<div class="handoff-feed">${items.map(r=>`<article class="handoff-message">
+    <div class="handoff-route"><strong>${safeText(valueOf(r,"fromShift","Unspecified"))}</strong><span>→</span><strong>${safeText(valueOf(r,"toShift","Unspecified"))}</strong><span class="tag">${safeText(valueOf(r,"priority","Normal"))}</span></div>
+    <h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"handoffNotes",r.details||"No handoff details"))}</p>${workspaceActionHtml(r)}
+  </article>`).join("")}</div>`;
+}
+function renderCheckoutDesk(items){
+  const active=items.filter(r=>String(r.status||"").toLowerCase()!=="returned"),returned=items.filter(r=>String(r.status||"").toLowerCase()==="returned");
+  const list=(rows,empty)=>rows.length?rows.map(r=>`<div class="checkout-item"><div><h4>${safeText(r.title)}</h4><span>${safeText(valueOf(r,"checkedOutTo","Unassigned"))} • Due ${safeText(shortDate(r.dueDate||""))}</span></div>${workspaceActionHtml(r)}</div>`).join(""):`<div class="tool-empty">${empty}</div>`;
+  return `<div class="checkout-desk"><section class="checkout-active"><div class="panel-heading"><div><small>OUT NOW</small><h3>Currently Checked Out</h3></div></div>${list(active,"No assets currently checked out.")}</section><section class="checkout-returned"><div class="panel-heading"><div><small>RETURNED</small><h3>Recent Returns</h3></div></div>${list(returned.slice(0,8),"No returned assets yet.")}</section></div>`;
+}
+function renderLogbookTimeline(items){
+  const sorted=items.slice().sort((a,b)=>String(valueOf(b,"logDate","")).localeCompare(String(valueOf(a,"logDate","")));
+  return `<div class="logbook-timeline">${sorted.map(r=>`<article class="logbook-entry"><div class="logbook-date">${safeText(shortDate(valueOf(r,"logDate","")))}</div><div><h4>${safeText(r.title)}</h4><p>${safeText(r.details||valueOf(r,"nextAction",""))}</p><div class="record-meta"><span class="tag">${safeText(valueOf(r,"shift","Any shift"))}</span><span class="tag">${safeText(valueOf(r,"issueFlag","Routine"))}</span></div></div>${workspaceActionHtml(r)}</article>`).join("")}</div>`;
+}
+function renderEmployeeDirectory(items){
+  return `<div class="employee-directory-grid">${items.map(r=>{
+    const initials=(r.title||"?").split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();
+    return `<article class="directory-card"><div class="directory-card-head"><span class="directory-avatar">${safeText(initials)}</span><div><h4>${safeText(r.title)}</h4><span>${safeText(valueOf(r,"role","Employee"))}${valueOf(r,"department","")?` • ${safeText(valueOf(r,"department"))}`:""}</span></div></div><div class="directory-contact">${valueOf(r,"email","")?`<span>✉ ${safeText(valueOf(r,"email"))}</span>`:""}${valueOf(r,"phone","")?`<span>☎ ${safeText(valueOf(r,"phone"))}</span>`:""}<span>Started ${safeText(shortDate(valueOf(r,"startDate","")))}</span></div>${workspaceActionHtml(r)}</article>`;
+  }).join("")}</div>`;
+}
+function renderFleetDashboard(items){
+  return `<div class="fleet-grid">${items.map(r=>`<article class="fleet-card"><div class="fleet-card-head"><div><small>${safeText(valueOf(r,"plate","NO PLATE"))}</small><h4>${safeText(r.title)}</h4><span>${safeText(valueOf(r,"year",""))} ${safeText(valueOf(r,"makeModel",""))}</span></div><span class="owner-status ${ownerStatusClass(r.status||"")}">${safeText(r.status||"")}</span></div><div class="fleet-data-grid"><div><span>Mileage</span><strong>${safeText(valueOf(r,"mileage","—"))}</strong></div><div><span>Condition</span><strong>${safeText(valueOf(r,"condition"))}</strong></div><div><span>Driver</span><strong>${safeText(valueOf(r,"assignedTo","Unassigned"))}</strong></div><div><span>Next Service</span><strong>${safeText(shortDate(r.dueDate||""))}</strong></div></div>${workspaceActionHtml(r)}</article>`).join("")}</div>`;
+}
+function renderProofGallery(items){
+  return `<div class="proof-gallery">${items.map(r=>{
+    const url=valueOf(r,"photoUrl","");
+    return `<article class="proof-card"><div class="proof-visual">${url&&/^https?:\/\//i.test(url)?`<img src="${safeText(url)}" alt="${safeText(r.title)}" onerror="this.parentElement.innerHTML='▣'"/>`:"▣"}</div><div class="proof-body"><span class="tag">${safeText(valueOf(r,"proofType","Proof"))}</span><h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"customerName",valueOf(r,"jobReference","No job reference")))}</p>${workspaceActionHtml(r)}</div></article>`;
+  }).join("")}</div>`;
+}
+function renderVendorDirectory(items){
+  return `<div class="vendor-directory-grid">${items.map(r=>`<article class="directory-card"><div class="directory-card-head"><span class="directory-avatar">${safeText((r.title||"V")[0].toUpperCase())}</span><div><h4>${safeText(r.title)}</h4><span>${safeText(valueOf(r,"service","Vendor"))}</span></div></div><div class="directory-contact"><span>${safeText(valueOf(r,"contactName","No contact"))}</span>${valueOf(r,"phone","")?`<span>☎ ${safeText(valueOf(r,"phone"))}</span>`:""}${valueOf(r,"email","")?`<span>✉ ${safeText(valueOf(r,"email"))}</span>`:""}${valueOf(r,"paymentTerms","")?`<span>Terms: ${safeText(valueOf(r,"paymentTerms"))}</span>`:""}</div>${workspaceActionHtml(r)}</article>`).join("")}</div>`;
+}
+function renderSubscriptionLedger(items){
+  const monthly=items.reduce((sum,r)=>{
+    const cost=Number(valueOf(r,"cost",0))||0,cycle=String(valueOf(r,"billingCycle","Monthly")).toLowerCase();
+    return sum+(cycle==="annual"?cost/12:cycle==="quarterly"?cost/3:cycle==="semiannual"?cost/6:cost);
+  },0);
+  return `<div class="panel" style="margin-bottom:12px"><div class="panel-heading"><div><small>ESTIMATED RECURRING COST</small><h3>$${monthly.toFixed(2)} / month</h3></div><strong>$${(monthly*12).toFixed(2)} / year</strong></div></div><div class="subscription-ledger">${items.map(r=>`<div class="subscription-row"><div><strong>${safeText(r.title)}</strong><span>${safeText(valueOf(r,"provider",""))}</span></div><div><span class="money-amount">$${safeText(valueOf(r,"cost","0.00"))}</span><span class="billing-cycle">${safeText(valueOf(r,"billingCycle","Monthly"))}</span></div><div><small>Next / renewal</small><strong>${safeText(shortDate(r.dueDate||""))}</strong></div>${workspaceActionHtml(r)}</div>`).join("")}</div>`;
+}
+function renderDocumentRegister(items){
+  return `<div class="document-register">${items.map(r=>`<div class="document-row"><div><strong>${safeText(r.title)}</strong><small>${safeText(valueOf(r,"documentType","Document"))}</small></div><div><small>Reference</small>${safeText(valueOf(r,"referenceNumber"))}</div><div><small>Responsible</small>${safeText(valueOf(r,"responsiblePerson"))}</div><div><small>Expires / Review</small>${safeText(shortDate(r.dueDate||""))}</div>${workspaceActionHtml(r)}</div>`).join("")}</div>`;
+}
+function renderTrainingMatrix(items){
+  return `<div class="training-matrix"><table class="training-table"><thead><tr><th>Employee</th><th>Training</th><th>Status</th><th>Provider</th><th>Completed</th><th>Renewal</th><th>Action</th></tr></thead><tbody>${items.map(r=>`<tr><td>${safeText(valueOf(r,"employee","Unassigned"))}</td><td><strong>${safeText(r.title)}</strong></td><td>${safeText(r.status||"")}</td><td>${safeText(valueOf(r,"provider"))}</td><td>${safeText(shortDate(valueOf(r,"completionDate","")))}</td><td>${safeText(shortDate(r.dueDate||""))}</td><td>${workspaceActionHtml(r)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function renderWebsiteStatus(items){
+  return `<div class="website-status-grid">${items.map(r=>{
+    const s=String(valueOf(r,"observedStatus",r.status||"Working")).toLowerCase(),dot=s.includes("down")?"down":s.includes("slow")||s.includes("intermittent")||s.includes("degraded")?"degraded":"";
+    return `<article class="website-status-card"><div class="website-status-line"><div><span class="status-dot ${dot}"></span><strong>${safeText(r.title)}</strong></div><span class="owner-status ${ownerStatusClass(r.status||"")}">${safeText(valueOf(r,"observedStatus",r.status||"Unknown"))}</span></div><p>${safeText(valueOf(r,"url","No URL"))}</p><div class="asset-data-grid"><div><span>Check Type</span><strong>${safeText(valueOf(r,"checkType","Uptime"))}</strong></div><div><span>Last Checked</span><strong>${safeText(valueOf(r,"checkedAt","—"))}</strong></div></div>${workspaceActionHtml(r)}</article>`;
+  }).join("")}</div>`;
+}
+function renderQrLabels(items){
+  return `<div class="qr-label-grid">${items.map(r=>`<article class="qr-label-card"><div class="qr-placeholder">QR</div><div><small>${safeText(valueOf(r,"assetId","NO ID"))}</small><h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"location","No location"))}</p><div class="record-actions">${quickActionButton(r)}<button class="mini-btn" data-view-record="${r.id}">Details</button></div></div></article>`).join("")}</div>`;
+}
+function renderSupplyInventory(items){
+  return `<div class="supply-inventory">${items.map(r=>{
+    const qty=Number(valueOf(r,"quantity",0))||0,re=Number(valueOf(r,"reorderLevel",0))||0,max=Math.max(qty,re*2,1),pct=Math.max(0,Math.min(100,qty/max*100)),cls=qty<=0?"out":qty<=re?"low":"";
+    return `<div class="supply-row"><div><strong>${safeText(r.title)}</strong><span>${safeText(valueOf(r,"location","No location"))} • ${safeText(valueOf(r,"supplier","No supplier"))}</span></div><div><div><strong>${qty} ${safeText(valueOf(r,"unit","units"))}</strong><small>Reorder at ${re}</small></div><div class="stock-meter"><span class="${cls}" style="width:${pct}%"></span></div></div><span class="owner-status ${ownerStatusClass(r.status||"")}">${safeText(r.status||"")}</span>${workspaceActionHtml(r)}</div>`;
+  }).join("")}</div>`;
+}
+function renderWarrantyCoverage(items){
+  return `<div class="warranty-grid">${items.map(r=>{
+    const d=daysUntil(r.dueDate),coverage=d===null?"No expiration":d<0?"Expired":`${d} days left`;
+    return `<article class="warranty-card"><div class="warranty-card-head"><div><small>${safeText(valueOf(r,"manufacturer","Manufacturer"))}</small><h4>${safeText(r.title)}</h4><span>${safeText(valueOf(r,"model",""))}</span></div><span class="owner-status ${d!==null&&d<0?"canceled":"active"}">${safeText(coverage)}</span></div><div class="asset-data-grid"><div><span>Serial</span><strong>${safeText(valueOf(r,"serialNumber"))}</strong></div><div><span>Type</span><strong>${safeText(valueOf(r,"warrantyType","Warranty"))}</strong></div><div><span>Purchased</span><strong>${safeText(shortDate(valueOf(r,"purchaseDate","")))}</strong></div><div><span>Claim Contact</span><strong>${safeText(valueOf(r,"claimContact"))}</strong></div></div>${workspaceActionHtml(r)}</article>`;
+  }).join("")}</div>`;
+}
+function renderComplaintPipeline(items){
+  const groups=["New","In Review","Waiting on Customer","Resolved"];
+  return `<div class="complaint-ticket-list">${groups.map(status=>{
+    const rows=items.filter(r=>String(r.status||"New").toLowerCase()===status.toLowerCase());
+    return `<section class="panel"><div class="panel-heading"><div><small>CASE STAGE</small><h3>${status}</h3></div><span>${rows.length}</span></div>${rows.length?rows.map(r=>`<article class="complaint-ticket"><span class="case-severity ${String(valueOf(r,"severity","")).toLowerCase()}"></span><div><h4>${safeText(r.title)}</h4><p>${safeText(valueOf(r,"customer","Unknown customer"))} • ${safeText(valueOf(r,"channel",""))}</p><span class="tag">${safeText(valueOf(r,"severity","Moderate"))}</span></div>${workspaceActionHtml(r)}</article>`).join(""):'<div class="tool-empty">No cases in this stage.</div>'}</section>`;
+  }).join("")}</div>`;
+}
+function renderIdeaBoard(items){
+  const groups=["Submitted","Under Review","Approved","Implemented"];
+  return `<div class="idea-board">${groups.map(status=>{const rows=items.filter(r=>String(r.status||"Submitted").toLowerCase()===status.toLowerCase());return `<section class="idea-column"><h4>${status} (${rows.length})</h4>${rows.map(r=>`<article class="idea-card"><strong>${safeText(r.title)}</strong><p>${safeText(valueOf(r,"expectedBenefit",""))}</p><div class="record-meta"><span class="tag">${safeText(valueOf(r,"priority","Normal"))}</span></div>${workspaceActionHtml(r)}</article>`).join("")}</section>`}).join("")}</div>`;
+}
+function renderReceptionDesk(items){
+  const onsite=items.filter(r=>String(r.status||"").toLowerCase()==="on site"),history=items.filter(r=>String(r.status||"").toLowerCase()!=="on site");
+  const card=r=>`<div class="reception-card"><strong>${safeText(r.title)}</strong><span>${safeText(valueOf(r,"company",""))} • Visiting ${safeText(valueOf(r,"host",""))}</span><small>Arrived ${safeText(valueOf(r,"arrival","—"))}</small>${workspaceActionHtml(r)}</div>`;
+  return `<div class="reception-layout"><section class="reception-panel"><div class="panel-heading"><div><small>LIVE</small><h3>Currently On Site</h3></div><strong>${onsite.length}</strong></div>${onsite.length?onsite.map(card).join(""):'<div class="tool-empty">No visitors currently on site.</div>'}</section><section class="reception-panel"><div class="panel-heading"><div><small>HISTORY</small><h3>Checked Out</h3></div></div>${history.slice(0,10).map(card).join("")||'<div class="tool-empty">No visitor history yet.</div>'}</section></div>`;
+}
+function renderPackageQueue(items){
+  const waiting=items.filter(r=>!["picked up","returned"].includes(String(r.status||"").toLowerCase())),done=items.filter(r=>["picked up","returned"].includes(String(r.status||"").toLowerCase()));
+  const card=r=>`<div class="package-card"><div class="record-meta"><span class="tag">${safeText(valueOf(r,"carrier","Carrier"))}</span><span class="tag">${safeText(r.status||"Received")}</span></div><strong>${safeText(r.title)}</strong><span>For ${safeText(valueOf(r,"recipient","Unknown recipient"))}</span><small>Received ${safeText(valueOf(r,"receivedAt","—"))}</small>${workspaceActionHtml(r)}</div>`;
+  return `<div class="package-layout"><section class="package-panel"><div class="panel-heading"><div><small>ACTION NEEDED</small><h3>Waiting for Pickup</h3></div><strong>${waiting.length}</strong></div>${waiting.length?waiting.map(card).join(""):'<div class="tool-empty">No packages waiting.</div>'}</section><section class="package-panel"><div class="panel-heading"><div><small>COMPLETED</small><h3>Picked Up / Returned</h3></div></div>${done.slice(0,12).map(card).join("")||'<div class="tool-empty">No completed packages yet.</div>'}</section></div>`;
+}
+
+function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot();if(activeToolWorkspaceId&&views?.toolWorkspace&&!$("toolWorkspaceView").classList.contains("hidden"))renderToolWorkspace(activeToolWorkspaceId)}
 function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!completedStatus(r)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||completedStatus(r))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
-function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,12).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{switchView("records");$("recordModuleFilter").value=btn.dataset.toolOpen;renderRecords();});}
+function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,24).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong><small>${safeText(toolExperience(t.id).mode.replace(/([A-Z])/g," $1").trim())}</small></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{activeToolWorkspaceId=btn.dataset.toolOpen;switchView("toolWorkspace");renderToolWorkspace(activeToolWorkspaceId);});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
 function renderModuleSettings(){
   if(!canManageTools()){$("moduleSettingsGrid").innerHTML="";return;}
@@ -2784,6 +3220,12 @@ function bindRecordActions(){
     renderEverything();
   });
 }
+$("toolWorkspaceBackBtn").addEventListener("click",()=>switchView("dashboard"));
+$("toolWorkspaceAllRecordsBtn").addEventListener("click",()=>{
+  if(activeToolWorkspaceId){$("recordModuleFilter").value=activeToolWorkspaceId;renderRecords();}
+  switchView("records");
+});
+$("toolWorkspaceAddBtn").addEventListener("click",()=>openRecordModal());
 $("recordSearch").addEventListener("input",renderRecords);
 $("recordModuleFilter").addEventListener("change",renderRecords);
 $("recordStatusFilter").addEventListener("change",renderRecords);
@@ -2806,10 +3248,24 @@ function fieldHtml(field,value=""){
   return `<label class="${field.wide?"field-wide":""}">${safeText(field.label)}${control}${field.help?`<span class="field-help">${safeText(field.help)}</span>`:""}</label>`;
 }
 function renderDynamicFields(moduleId,record=null){
-  const t=toolById(moduleId);
+  const t=toolById(moduleId),cfg=toolExperience(moduleId);
   $("recordEyebrow").textContent=t.category.toUpperCase();
   $("recordModalHelper").textContent=t.helper;
-  $("dynamicFields").innerHTML=t.fields.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("");
+  document.querySelector(".record-modal-card").dataset.toolForm=moduleId;
+  $("toolFormContext").innerHTML=`<span class="tool-form-context-icon">${safeText(t.icon)}</span><div><strong>${safeText(t.name)} workflow</strong><span>${safeText(cfg.formIntro)}</span></div>`;
+  $("toolNotesLabel").textContent=cfg.notes||"Notes";
+  $("recordSaveBtn").textContent=record?`Save ${t.name}`:cfg.addLabel.replace(/^\+\s*/,"");
+  const fieldMap=new Map(t.fields.map(f=>[f.key,f]));
+  const used=new Set();
+  const sections=(cfg.sections||[]).map(section=>{
+    const fields=(section.keys||[]).map(key=>fieldMap.get(key)).filter(Boolean);
+    fields.forEach(f=>used.add(f.key));
+    if(!fields.length)return "";
+    return `<section class="tool-form-section"><div class="tool-form-section-head"><strong>${safeText(section.title)}</strong><span>${safeText(section.hint||"")}</span></div>${fields.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("")}</section>`;
+  }).join("");
+  const leftovers=t.fields.filter(f=>!used.has(f.key));
+  $("dynamicFields").className="dynamic-fields tool-sectioned-fields";
+  $("dynamicFields").innerHTML=sections+(leftovers.length?`<section class="tool-form-section"><div class="tool-form-section-head"><strong>Additional Details</strong><span>Other information for this ${safeText(t.name.toLowerCase())} record.</span></div>${leftovers.map(f=>fieldHtml(f,f.key==="title"?(record?.title||""):(record?.fields?.[f.key]||""))).join("")}</section>`:"");
   $("dueDateLabel").childNodes[0].nodeValue=`${t.dueLabel} `;
   const currentStatus=record?.status||t.statuses[0];
   $("recordStatus").innerHTML=t.statuses.map(s=>`<option value="${safeText(s)}">${safeText(s)}</option>`).join("");
@@ -2818,8 +3274,8 @@ function renderDynamicFields(moduleId,record=null){
 function openRecordModal(record=null){
   if(record&&!canEditRecords()){alert("Your employee account cannot edit records.");return;}
   if(!record&&!canCreateRecords()){alert("Your employee account cannot create records.");return;}
-  $("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks");$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:`Add ${toolById(moduleId).name}`;renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
-$("recordModule").addEventListener("change",()=>{$("recordModalTitle").textContent=`Add ${toolById($("recordModule").value).name}`;renderDynamicFields($("recordModule").value,null)});
+  $("recordForm").reset();$("recordMessage").textContent="";$("recordId").value=record?.id||"";let moduleId=record?.module||(activeToolWorkspaceId&&canAccessModule(activeToolWorkspaceId)?activeToolWorkspaceId:($("recordModuleFilter").value!=="all"?$("recordModuleFilter").value:enabledModules()[0]||"tasks"));$("recordModule").value=moduleId;$("recordModalTitle").textContent=record?`Edit ${toolById(moduleId).name}`:toolExperience(moduleId).addLabel.replace(/^\+\s*/,"");renderDynamicFields(moduleId,record);if(record?.status && [...$("recordStatus").options].some(o=>o.value===record.status)) $("recordStatus").value=record.status;$("recordDueDate").value=record?.dueDate||"";$("recordDetails").value=record?.details||"";recordModal.classList.remove("hidden");}
+$("recordModule").addEventListener("change",()=>{$("recordModalTitle").textContent=toolExperience($("recordModule").value).addLabel.replace(/^\+\s*/,"");renderDynamicFields($("recordModule").value,null)});
 $("addRecordBtn").addEventListener("click",()=>openRecordModal());$("quickAddBtn").addEventListener("click",()=>openRecordModal());document.querySelectorAll("[data-close-record]").forEach(btn=>btn.addEventListener("click",()=>recordModal.classList.add("hidden")));recordModal.addEventListener("click",e=>{if(e.target===recordModal)recordModal.classList.add("hidden")});
 $("recordForm").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -2861,14 +3317,14 @@ $("businessSettingsForm").addEventListener("submit",async e=>{
   Object.assign(business,updates);$("sidebarBusinessName").textContent=business.name;alert("Business settings saved.");
 });
 if($("monthlyPicker")){$("monthlyPicker").value=monthKeyFromDate(new Date());$("monthlyPicker").addEventListener("change",renderMonthlyOverview);$("monthlyPrevBtn").addEventListener("click",()=>shiftMonth(-1));$("monthlyNextBtn").addEventListener("click",()=>shiftMonth(1));}
-const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],organization:[$("organizationView"),"FREEDOM STRUCTURE","Organization"],roles:[$("rolesView"),"ACCESS TEMPLATES","Roles & Access"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
+const views={dashboard:[$("dashboardView"),"OVERVIEW","Dashboard"],monthly:[$("monthlyView"),"BUSINESS HISTORY","Monthly Overview"],tools:[$("toolsView"),"MODULES","Tools"],toolWorkspace:[$("toolWorkspaceView"),"BUSINESS TOOL","Tool Workspace"],records:[$("recordsView"),"BUSINESS DATA","All Records"],employees:[$("employeesView"),"TEAM ACCESS","Employee Accounts"],organization:[$("organizationView"),"FREEDOM STRUCTURE","Organization"],roles:[$("rolesView"),"ACCESS TEMPLATES","Roles & Access"],settings:[$("settingsView"),"ACCOUNT","Settings"]};
 function switchView(name){
   if(!views[name])return;
   if(!canAccessBusinessView(name)){name="dashboard";}
   Object.entries(views).forEach(([key,[el]])=>el.classList.toggle("hidden",key!==name));
   document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));
-  $("viewEyebrow").textContent=views[name][1];
-  $("viewTitle").textContent=views[name][2];
+  $("viewEyebrow").textContent=name==="toolWorkspace"&&activeToolWorkspaceId?toolById(activeToolWorkspaceId).category.toUpperCase():views[name][1];
+  $("viewTitle").textContent=name==="toolWorkspace"&&activeToolWorkspaceId?toolById(activeToolWorkspaceId).name:views[name][2];
   if(name==="employees"&&canManageEmployees())renderEmployeeAccounts();
   if(name==="organization"&&canManageOrganization())renderOrganization();
   if(name==="roles"&&isBusinessOwnerAccount())renderRoles();
