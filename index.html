@@ -206,6 +206,29 @@
           <article class="panel monthly-records-panel"><div class="panel-heading"><div><small>MONTH RECORDS</small><h3 id="monthlyRecordTitle">Records</h3></div></div><div class="record-list" id="monthlyRecords"></div></article>
         </section>
         <section class="app-view hidden" id="toolsView" data-can-manage-tools><article class="panel"><div class="panel-heading"><div><small>MODULES</small><h3>Choose Your Business Tools</h3></div></div><p class="panel-copy">Turn tools on or off. Disabled tools stay out of your dashboard without deleting their records.</p><div class="module-settings-grid" id="moduleSettingsGrid"></div></article></section>
+        <section class="app-view hidden" id="toolWorkspaceView">
+          <div class="tool-workspace-shell">
+            <div class="tool-workspace-heading">
+              <div class="tool-workspace-title-wrap">
+                <button class="mini-btn" id="toolWorkspaceBackBtn" type="button">← Dashboard</button>
+                <span class="tool-workspace-icon" id="toolWorkspaceIcon">✓</span>
+                <div>
+                  <small id="toolWorkspaceCategory">OPERATIONS</small>
+                  <h2 id="toolWorkspaceTitle">Tasks</h2>
+                  <p id="toolWorkspaceDescription"></p>
+                </div>
+              </div>
+              <div class="tool-workspace-actions">
+                <button class="btn btn-secondary" id="toolWorkspaceAllRecordsBtn" type="button">All Records</button>
+                <button class="btn btn-primary" id="toolWorkspaceAddBtn" type="button">+ Add</button>
+              </div>
+            </div>
+
+            <div class="tool-workspace-stats" id="toolWorkspaceStats"></div>
+            <div class="tool-workspace-content" id="toolWorkspaceContent"></div>
+          </div>
+        </section>
+
         <section class="app-view hidden" id="recordsView">
           <article class="panel">
             <div class="records-toolbar records-toolbar-advanced">
@@ -1235,14 +1258,17 @@
       <span class="eyebrow" id="recordEyebrow">BUSINESS TOOL</span>
       <h2 id="recordModalTitle">Add Record</h2>
       <p class="modal-helper" id="recordModalHelper"></p>
-      <form id="recordForm" class="auth-form">
+      <form id="recordForm" class="auth-form tool-record-form">
         <input type="hidden" id="recordId" />
-        <label>Tool<select class="input" id="recordModule" required></select></label>
+        <div class="tool-form-context" id="toolFormContext"></div>
+        <label class="tool-form-switcher">Tool<select class="input" id="recordModule" required></select></label>
         <div class="dynamic-fields" id="dynamicFields"></div>
-        <label>Status<select class="input" id="recordStatus"><option>Open</option><option>In Progress</option><option>Complete</option><option>Archived</option></select></label>
-        <label id="dueDateLabel">Due Date<input class="input" id="recordDueDate" type="date" /></label>
-        <label>Notes<textarea class="input textarea" id="recordDetails" rows="4" maxlength="3000"></textarea></label>
-        <div class="form-actions split"><button class="btn btn-secondary" type="button" data-close-record>Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
+        <div class="tool-form-footer-fields">
+          <label>Status<select class="input" id="recordStatus"><option>Open</option><option>In Progress</option><option>Complete</option><option>Archived</option></select></label>
+          <label id="dueDateLabel">Due Date<input class="input" id="recordDueDate" type="date" /></label>
+        </div>
+        <label class="tool-notes-field"><span id="toolNotesLabel">Notes</span><textarea class="input textarea" id="recordDetails" rows="4" maxlength="3000"></textarea></label>
+        <div class="form-actions split"><button class="btn btn-secondary" type="button" data-close-record>Cancel</button><button class="btn btn-primary" type="submit" id="recordSaveBtn">Save</button></div>
       </form>
       <p class="form-message" id="recordMessage"></p>
     </div>
