@@ -21,6 +21,7 @@ const toolDefinitions = [
     bullets:["Priority levels","Employee assignment","Recurring schedule","Due date and status"],
     helper:"Create a task with priority, assignment and a schedule.",
     dueLabel:"Due Date",
+    statuses:["Open","In Progress","Complete","Archived"],
     fields:[
       {key:"title",label:"Task Name",type:"text",required:true,wide:true},
       {key:"priority",label:"Priority",type:"select",options:["Low","Medium","High","Urgent"]},
@@ -34,6 +35,7 @@ const toolDefinitions = [
     bullets:["Reusable checklist items","Opening or closing routines","Assign responsibility","Daily/weekly/monthly frequency"],
     helper:"Save a reusable checklist. Put one checklist item on each line.",
     dueLabel:"Next Due Date",
+    statuses:["Ready","In Progress","Complete","Archived"],
     fields:[
       {key:"title",label:"Checklist Name",type:"text",required:true,wide:true},
       {key:"frequency",label:"Frequency",type:"select",options:["As Needed","Daily","Weekly","Monthly","Opening","Closing"]},
@@ -47,6 +49,7 @@ const toolDefinitions = [
     bullets:["Asset and serial numbers","Condition and location","Employee assignment","Purchase and maintenance dates"],
     helper:"Create a detailed equipment record for a tool, machine or company asset.",
     dueLabel:"Next Maintenance",
+    statuses:["Available","Assigned","Needs Repair","Out of Service","Archived"],
     fields:[
       {key:"title",label:"Equipment Name",type:"text",required:true,wide:true},
       {key:"assetNumber",label:"Asset Number",type:"text"},
@@ -63,6 +66,7 @@ const toolDefinitions = [
     bullets:["Last and next service","Mileage or operating hours","Service provider","Maintenance cost"],
     helper:"Record maintenance work and when the next service is due.",
     dueLabel:"Next Service Date",
+    statuses:["Scheduled","In Progress","Complete","Canceled","Archived"],
     fields:[
       {key:"title",label:"Maintenance Item",type:"text",required:true,wide:true},
       {key:"asset",label:"Equipment / Vehicle",type:"text"},
@@ -79,6 +83,7 @@ const toolDefinitions = [
     bullets:["Expiration dates","License and policy numbers","Renewal provider","Advance reminder period"],
     helper:"Add anything the business cannot afford to forget to renew.",
     dueLabel:"Expiration Date",
+    statuses:["Current","Due Soon","Renewed","Expired","Archived"],
     fields:[
       {key:"title",label:"Renewal Name",type:"text",required:true,wide:true},
       {key:"renewalType",label:"Type",type:"select",options:["Business License","Insurance","Vehicle Registration","Domain","Certification","Contract","Permit","Other"]},
@@ -93,6 +98,7 @@ const toolDefinitions = [
     bullets:["Date, time and location","People and witnesses","Damage or injury details","Follow-up actions"],
     helper:"Keep a clear internal record of an accident, damage event or other incident.",
     dueLabel:"Follow-up Due",
+    statuses:["Open","Investigating","Follow-up","Resolved","Archived"],
     fields:[
       {key:"title",label:"Incident Title",type:"text",required:true,wide:true},
       {key:"incidentType",label:"Incident Type",type:"select",options:["Accident","Property Damage","Equipment Damage","Customer Issue","Safety Issue","Security Issue","Other"]},
@@ -110,6 +116,7 @@ const toolDefinitions = [
     bullets:["From/to shift","Priority level","Unfinished work","Problems needing attention"],
     helper:"Pass important notes between shifts without relying on memory.",
     dueLabel:"Resolve By",
+    statuses:["Open","Acknowledged","Resolved","Archived"],
     fields:[
       {key:"title",label:"Handoff Subject",type:"text",required:true,wide:true},
       {key:"fromShift",label:"From Shift / Employee",type:"text"},
@@ -124,12 +131,15 @@ const toolDefinitions = [
     bullets:["Employee checkout","Checkout and return dates","Asset identification","Condition when issued"],
     helper:"Record who currently has a tool, key, device or other company asset.",
     dueLabel:"Expected Return",
+    statuses:["Checked Out","Returned","Overdue","Archived"],
     fields:[
       {key:"title",label:"Asset Name",type:"text",required:true,wide:true},
       {key:"assetId",label:"Asset / Tag Number",type:"text"},
       {key:"checkedOutTo",label:"Checked Out To",type:"text"},
       {key:"checkoutDate",label:"Checkout Date",type:"date"},
-      {key:"conditionOut",label:"Condition When Issued",type:"select",options:["Excellent","Good","Fair","Damaged"]}
+      {key:"conditionOut",label:"Condition When Issued",type:"select",options:["Excellent","Good","Fair","Damaged"]},
+      {key:"returnDate",label:"Actual Return Date",type:"date"},
+      {key:"conditionIn",label:"Condition When Returned",type:"select",options:["Excellent","Good","Fair","Damaged","Not Returned"]}
     ]
   },
   {
@@ -1218,17 +1228,490 @@ function renderMonthlyOverview(){
 
 function enabledModules(){return Array.isArray(business.enabledModules)?business.enabledModules:defaultEnabledModules}
 function renderEverything(){renderStats();renderDashboardTools();renderModuleSettings();renderRecords();renderRecentRecords();renderMonthlyOverview();renderDashboardMonthSnapshot()}
-function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!["Complete","Archived"].includes(r.status)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||["Complete","Archived"].includes(r.status))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
+function renderStats(){const now=new Date(),soon=new Date();soon.setDate(now.getDate()+7);$("statOpen").textContent=records.filter(r=>!completedStatus(r)).length;$("statDue").textContent=records.filter(r=>{if(!r.dueDate||completedStatus(r))return false;const d=new Date(`${r.dueDate}T23:59:59`);return d>=now&&d<=soon}).length;$("statTools").textContent=enabledModules().length;$("statTotal").textContent=records.length;}
 function renderDashboardTools(){const enabled=new Set(enabledModules());$("dashboardToolGrid").innerHTML=toolDefinitions.filter(t=>enabled.has(t.id)).slice(0,12).map(t=>`<button class="tool-card" data-tool-open="${t.id}"><span>${safeText(t.icon)}</span><strong>${safeText(t.name)}</strong></button>`).join("")||'<div class="empty-state">Enable at least one tool.</div>';document.querySelectorAll("[data-tool-open]").forEach(btn=>btn.onclick=()=>{switchView("records");$("recordModuleFilter").value=btn.dataset.toolOpen;renderRecords();});}
 function renderModuleOptions(){const opts=toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("");$("recordModule").innerHTML=opts;$("recordModuleFilter").innerHTML=`<option value="all">All tools</option>${opts}`;}
 function renderModuleSettings(){const enabled=new Set(enabledModules());$("moduleSettingsGrid").innerHTML=toolDefinitions.map(t=>`<div class="module-setting"><div><strong>${safeText(t.icon)} ${safeText(t.name)}</strong><small>${enabled.has(t.id)?"Enabled":"Disabled"}</small></div><button class="toggle ${enabled.has(t.id)?"on":""}" data-module-toggle="${t.id}" aria-label="Toggle ${safeText(t.name)}"></button></div>`).join("");document.querySelectorAll("[data-module-toggle]").forEach(btn=>btn.onclick=async()=>{const id=btn.dataset.moduleToggle,next=new Set(enabledModules());next.has(id)?next.delete(id):next.add(id);business.enabledModules=[...next];await updateDoc(doc(db,"businesses",business.id),{enabledModules:business.enabledModules,updatedAt:serverTimestamp()});renderEverything();});}
 
-function recordFieldPreview(record){const t=toolById(record.module),values=record.fields||{};return t.fields.filter(f=>f.key!=="title"&&values[f.key]).slice(0,3).map(f=>`<span>${safeText(f.label)}: ${safeText(prettyValue(values[f.key]))}</span>`).join("");}
-function recordHtml(r){const t=toolById(r.module);return `<div class="record-item"><div class="record-main"><strong>${safeText(r.title||"Untitled")}</strong><p>${safeText(r.details||t.desc)}</p><div class="record-meta"><span class="tag">${safeText(t.name)}</span><span class="tag">${safeText(r.status||"Open")}</span>${r.dueDate?`<span class="tag">${safeText(t.dueLabel)}: ${safeText(r.dueDate)}</span>`:""}</div><div class="record-fields-preview">${recordFieldPreview(r)}</div></div><div class="record-actions"><button class="mini-btn" data-edit-record="${r.id}">Edit</button><button class="mini-btn danger" data-delete-record="${r.id}">Delete</button></div></div>`;}
-function renderRecords(){const search=$("recordSearch").value.trim().toLowerCase(),filter=$("recordModuleFilter").value;const filtered=records.filter(r=>{const extra=Object.values(r.fields||{}).join(" ");const textMatch=!search||`${r.title||""} ${r.details||""} ${r.status||""} ${extra}`.toLowerCase().includes(search);return textMatch&&(filter==="all"||r.module===filter)});$("allRecords").innerHTML=filtered.length?filtered.map(recordHtml).join(""):'<div class="empty-state">No records found.</div>';bindRecordActions();}
-function renderRecentRecords(){const recent=records.slice(0,5);$("recentRecords").innerHTML=recent.length?recent.map(recordHtml).join(""):'<div class="empty-state">No records yet.</div>';bindRecordActions();}
-function bindRecordActions(){document.querySelectorAll("[data-edit-record]").forEach(btn=>btn.onclick=()=>openRecordModal(records.find(r=>r.id===btn.dataset.editRecord)));document.querySelectorAll("[data-delete-record]").forEach(btn=>btn.onclick=async()=>{if(!confirm("Delete this record?"))return;await deleteDoc(doc(db,"businesses",business.id,"records",btn.dataset.deleteRecord));records=records.filter(r=>r.id!==btn.dataset.deleteRecord);renderEverything();});}
-$("recordSearch").addEventListener("input",renderRecords);$("recordModuleFilter").addEventListener("change",renderRecords);
+
+function recordFieldPreview(record){
+  const t=toolById(record.module),values=record.fields||{};
+  return t.fields.filter(f=>f.key!=="title"&&values[f.key]).slice(0,3)
+    .map(f=>`<span>${safeText(f.label)}: ${safeText(prettyValue(values[f.key]))}</span>`).join("");
+}
+function completedStatus(record){
+  const s=String(record.status||"").toLowerCase();
+  return ["complete","completed","resolved","approved","implemented","picked up","checked out","returned","renewed","current","operational","archived"].includes(s);
+}
+function recordDueHealth(record){
+  if(completedStatus(record)) return {key:"complete",label:"Completed"};
+  if(!record.dueDate) return {key:"current",label:"No due date"};
+  const today=new Date(); today.setHours(0,0,0,0);
+  const due=new Date(`${record.dueDate}T23:59:59`);
+  if(Number.isNaN(due.getTime())) return {key:"current",label:"Current"};
+  if(due<today) return {key:"overdue",label:"Overdue"};
+  const soon=new Date(today); soon.setDate(today.getDate()+7);
+  if(due<=soon) return {key:"soon",label:"Due soon"};
+  return {key:"current",label:"Upcoming"};
+}
+function todayDateInput(){
+  const d=new Date();
+  const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+function nowDateTimeInput(){
+  const d=new Date();
+  const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,16);
+}
+function addPeriodToDate(dateString,frequency){
+  const base=dateString?new Date(`${dateString}T12:00:00`):new Date();
+  if(Number.isNaN(base.getTime()))return "";
+  const f=String(frequency||"").toLowerCase();
+  if(f==="daily")base.setDate(base.getDate()+1);
+  else if(f==="weekly")base.setDate(base.getDate()+7);
+  else if(f==="monthly")base.setMonth(base.getMonth()+1);
+  else if(f==="quarterly")base.setMonth(base.getMonth()+3);
+  else if(f==="yearly")base.setFullYear(base.getFullYear()+1);
+  else return "";
+  return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,"0")}-${String(base.getDate()).padStart(2,"0")}`;
+}
+function getRecordAction(record){
+  const s=String(record.status||"").toLowerCase();
+  const f=record.fields||{};
+  switch(record.module){
+    case "tasks":
+      return completedStatus(record)
+        ? {key:"reopen",label:"Reopen"}
+        : {key:"complete",label:"Complete",success:true};
+    case "checklists":
+      return {key:"run_checklist",label:"Run Checklist",primary:true};
+    case "equipment":
+      return f.assignedTo
+        ? {key:"return_equipment",label:"Return"}
+        : {key:"assign_equipment",label:"Assign"};
+    case "maintenance":
+      return completedStatus(record)
+        ? {key:"reschedule_maintenance",label:"Reschedule"}
+        : {key:"service_complete",label:"Mark Serviced",success:true};
+    case "renewals":
+      return {key:"renew",label:"Renew",success:true};
+    case "incidents":
+      return s==="resolved"?{key:"reopen_incident",label:"Reopen"}:{key:"resolve",label:"Resolve",success:true};
+    case "shift-handoff":
+      if(s==="resolved")return {key:"reopen_handoff",label:"Reopen"};
+      return s==="acknowledged"?{key:"resolve_handoff",label:"Resolve",success:true}:{key:"acknowledge",label:"Acknowledge"};
+    case "asset-checkout":
+      return s==="returned"?{key:"checkout_again",label:"Check Out Again"}:{key:"return_asset",label:"Return",success:true};
+    case "logbook":
+      return s==="resolved"?null:{key:"resolve_log",label:"Resolve Follow-up",success:true};
+    case "employees":
+      return s==="on leave"?{key:"activate_employee",label:"Return Active",success:true}:{key:"employee_leave",label:"Put On Leave"};
+    case "vehicles":
+      return s==="needs service"?{key:"vehicle_active",label:"Return Active",success:true}:{key:"vehicle_service",label:"Needs Service"};
+    case "photo-proof":
+      return s==="approved"?null:{key:"approve_proof",label:"Approve",success:true};
+    case "vendors":
+      return s==="preferred"?{key:"vendor_active",label:"Set Active"}:{key:"vendor_preferred",label:"Make Preferred",success:true};
+    case "subscriptions":
+      return s==="canceled"?{key:"activate_subscription",label:"Reactivate",success:true}:{key:"cancel_subscription",label:"Cancel"};
+    case "documents":
+      return s==="current"?null:{key:"document_current",label:"Mark Current",success:true};
+    case "training":
+      return s==="completed"?null:{key:"complete_training",label:"Complete",success:true};
+    case "website-monitor":
+      return {key:"open_website",label:"Open Website",primary:true};
+    case "qr-assets":
+      return f.destinationUrl?{key:"open_qr_link",label:"Open Link",primary:true}:{key:"copy_asset_id",label:"Copy Asset ID"};
+    case "supplies":
+      return {key:"restock",label:"Restock",success:true};
+    case "warranties":
+      return s==="claim open"?{key:"close_claim",label:"Close Claim",success:true}:{key:"open_claim",label:"Open Claim"};
+    case "complaints":
+      return s==="resolved"?{key:"reopen_complaint",label:"Reopen"}:{key:"resolve_complaint",label:"Resolve",success:true};
+    case "suggestions":
+      if(s==="implemented")return null;
+      if(s==="approved")return {key:"implement_suggestion",label:"Implement",success:true};
+      return {key:"approve_suggestion",label:"Approve",success:true};
+    case "visitor-log":
+      return s==="checked out"?null:{key:"checkout_visitor",label:"Check Out",success:true};
+    case "package-log":
+      if(s==="picked up")return null;
+      return s==="recipient notified"
+        ? {key:"pickup_package",label:"Picked Up",success:true}
+        : {key:"notify_recipient",label:"Notify Recipient"};
+    default:
+      return null;
+  }
+}
+function quickActionButton(record){
+  const a=getRecordAction(record);
+  if(!a)return "";
+  return `<button class="mini-btn ${a.primary?"record-action-primary":""} ${a.success?"record-action-success":""}" data-record-action="${a.key}" data-record-id="${record.id}">${safeText(a.label)}</button>`;
+}
+function recurringNextButton(record){
+  if(record.module!=="tasks"||!completedStatus(record))return "";
+  const recurring=record.fields?.recurring;
+  if(!recurring||recurring==="No")return "";
+  return `<button class="mini-btn" data-record-action="create_next_task" data-record-id="${record.id}">Create Next</button>`;
+}
+function recordHtml(r){
+  const t=toolById(r.module),health=recordDueHealth(r);
+  return `<div class="record-item">
+    <div class="record-main">
+      <strong>${safeText(r.title||"Untitled")}</strong>
+      <p>${safeText(r.details||t.desc)}</p>
+      <div class="record-meta">
+        <span class="tag">${safeText(t.name)}</span>
+        <span class="tag">${safeText(r.status||t.statuses?.[0]||"Open")}</span>
+        ${r.dueDate?`<span class="tag">${safeText(t.dueLabel)}: ${safeText(r.dueDate)}</span>`:""}
+        <span class="record-health ${health.key}">${safeText(health.label)}</span>
+      </div>
+      <div class="record-fields-preview">${recordFieldPreview(r)}</div>
+    </div>
+    <div class="record-actions">
+      ${quickActionButton(r)}
+      ${recurringNextButton(r)}
+      <button class="mini-btn" data-view-record="${r.id}">View</button>
+      <button class="mini-btn" data-duplicate-record="${r.id}">Duplicate</button>
+      <button class="mini-btn" data-edit-record="${r.id}">Edit</button>
+      <button class="mini-btn danger" data-delete-record="${r.id}">Delete</button>
+    </div>
+  </div>`;
+}
+let currentFilteredRecords=[];
+function allRecordStatuses(){
+  return [...new Set(records.map(r=>r.status).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+function refreshRecordStatusFilter(){
+  const select=$("recordStatusFilter");
+  if(!select)return;
+  const current=select.value||"all";
+  select.innerHTML=`<option value="all">All statuses</option>${allRecordStatuses().map(s=>`<option value="${safeText(s)}">${safeText(s)}</option>`).join("")}`;
+  select.value=[...select.options].some(o=>o.value===current)?current:"all";
+}
+function recordMatchesDueFilter(record,filter){
+  if(filter==="all")return true;
+  const health=recordDueHealth(record);
+  if(filter==="overdue")return health.key==="overdue";
+  if(filter==="due_soon")return health.key==="soon";
+  if(filter==="no_date")return !record.dueDate;
+  if(filter==="completed")return completedStatus(record);
+  return true;
+}
+function renderRecords(){
+  refreshRecordStatusFilter();
+  const search=$("recordSearch").value.trim().toLowerCase();
+  const moduleFilter=$("recordModuleFilter").value;
+  const statusFilter=$("recordStatusFilter")?.value||"all";
+  const dueFilter=$("recordDueFilter")?.value||"all";
+  currentFilteredRecords=records.filter(r=>{
+    const extra=Object.values(r.fields||{}).join(" ");
+    const textMatch=!search||`${r.title||""} ${r.details||""} ${r.status||""} ${extra}`.toLowerCase().includes(search);
+    return textMatch
+      &&(moduleFilter==="all"||r.module===moduleFilter)
+      &&(statusFilter==="all"||r.status===statusFilter)
+      &&recordMatchesDueFilter(r,dueFilter);
+  });
+  $("allRecords").innerHTML=currentFilteredRecords.length?currentFilteredRecords.map(recordHtml).join(""):'<div class="empty-state">No records found.</div>';
+
+  const overdue=currentFilteredRecords.filter(r=>recordDueHealth(r).key==="overdue").length;
+  const soon=currentFilteredRecords.filter(r=>recordDueHealth(r).key==="soon").length;
+  const completed=currentFilteredRecords.filter(completedStatus).length;
+  $("recordsSummary").innerHTML=`
+    <span class="records-summary-chip"><strong>${currentFilteredRecords.length}</strong> shown</span>
+    <span class="records-summary-chip"><strong>${overdue}</strong> overdue</span>
+    <span class="records-summary-chip"><strong>${soon}</strong> due soon</span>
+    <span class="records-summary-chip"><strong>${completed}</strong> completed / resolved</span>`;
+  bindRecordActions();
+}
+function renderRecentRecords(){
+  const recent=records.slice(0,5);
+  $("recentRecords").innerHTML=recent.length?recent.map(recordHtml).join(""):'<div class="empty-state">No records yet.</div>';
+  bindRecordActions();
+}
+function csvEscape(value){
+  const s=String(value??"").replaceAll("\r"," ").replaceAll("\n"," | ");
+  return `"${s.replaceAll('"','""')}"`;
+}
+function exportRecordsCsv(){
+  const rows=currentFilteredRecords.length?currentFilteredRecords:records;
+  if(!rows.length){alert("There are no records to export.");return;}
+  const allFieldKeys=[...new Set(rows.flatMap(r=>Object.keys(r.fields||{})))];
+  const header=["Tool","Title","Status","Due Date","Notes",...allFieldKeys];
+  const lines=[header.map(csvEscape).join(",")];
+  rows.forEach(r=>{
+    const t=toolById(r.module);
+    lines.push([
+      t.name,r.title||"",r.status||"",r.dueDate||"",r.details||"",
+      ...allFieldKeys.map(k=>r.fields?.[k]||"")
+    ].map(csvEscape).join(","));
+  });
+  const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`${(business.name||"business").replace(/[^a-z0-9]+/gi,"-").toLowerCase()}-toolbox-records.csv`;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+async function patchRecord(record,updates){
+  await updateDoc(doc(db,"businesses",business.id,"records",record.id),{
+    ...updates,
+    updatedAt:serverTimestamp(),
+    updatedBy:currentUser.uid
+  });
+  await loadRecords();
+  renderEverything();
+}
+async function duplicateRecord(record){
+  const payload={
+    module:record.module,
+    title:`${record.title||"Untitled"} Copy`,
+    status:toolById(record.module).statuses?.[0]||"Open",
+    dueDate:record.dueDate||"",
+    details:record.details||"",
+    fields:{...(record.fields||{})},
+    createdAt:serverTimestamp(),
+    createdBy:currentUser.uid,
+    updatedAt:serverTimestamp(),
+    updatedBy:currentUser.uid
+  };
+  if(record.module==="checklists")payload.fields.checkedItems="[]";
+  await addDoc(collection(db,"businesses",business.id,"records"),payload);
+  await loadRecords();renderEverything();
+}
+function parseCheckedItems(record){
+  try{
+    const parsed=JSON.parse(record.fields?.checkedItems||"[]");
+    return Array.isArray(parsed)?parsed.map(Number).filter(Number.isFinite):[];
+  }catch{return []}
+}
+let activeChecklistRecordId=null;
+function openChecklistRunner(record){
+  activeChecklistRecordId=record.id;
+  const items=String(record.fields?.items||"").split("\n").map(x=>x.trim()).filter(Boolean);
+  const checked=new Set(parseCheckedItems(record));
+  $("checklistRunnerTitle").textContent=record.title||"Run Checklist";
+  $("checklistRunnerHelper").textContent=`${items.length} checklist item${items.length===1?"":"s"} • ${record.fields?.assignedTo||"Unassigned"}`;
+  $("checklistRunnerItems").innerHTML=items.length?items.map((item,i)=>`
+    <label class="checklist-runner-item">
+      <input type="checkbox" data-checklist-index="${i}" ${checked.has(i)?"checked":""}/>
+      <span>${safeText(item)}</span>
+    </label>`).join(""):'<div class="empty-state">This checklist has no items yet. Edit it to add checklist items.</div>';
+  $("checklistRunnerMessage").textContent="";
+  updateChecklistProgressPreview();
+  document.querySelectorAll("[data-checklist-index]").forEach(cb=>cb.addEventListener("change",updateChecklistProgressPreview));
+  $("checklistRunnerModal").classList.remove("hidden");
+}
+function updateChecklistProgressPreview(){
+  const boxes=[...document.querySelectorAll("[data-checklist-index]")];
+  const done=boxes.filter(b=>b.checked).length,total=boxes.length;
+  const pct=total?Math.round(done/total*100):0;
+  $("checklistProgressText").textContent=`${done} of ${total} complete`;
+  $("checklistProgressPercent").textContent=`${pct}%`;
+  $("checklistProgressBar").style.width=`${pct}%`;
+}
+async function saveChecklistProgress(reset=false){
+  const record=records.find(r=>r.id===activeChecklistRecordId);
+  if(!record)return;
+  const boxes=[...document.querySelectorAll("[data-checklist-index]")];
+  const checked=reset?[]:boxes.filter(b=>b.checked).map(b=>Number(b.dataset.checklistIndex));
+  const total=boxes.length;
+  const status=checked.length===0?"Ready":checked.length===total&&total>0?"Complete":"In Progress";
+  await patchRecord(record,{
+    status,
+    fields:{...(record.fields||{}),checkedItems:JSON.stringify(checked)}
+  });
+  $("checklistRunnerModal").classList.add("hidden");
+}
+function recordDetailFieldRows(record){
+  const t=toolById(record.module),values=record.fields||{};
+  return t.fields.filter(f=>f.key!=="title").map(f=>{
+    let value=values[f.key];
+    if(f.key==="items"){
+      const items=String(value||"").split("\n").map(x=>x.trim()).filter(Boolean);
+      const checked=new Set(parseCheckedItems(record));
+      value=items.length?items.map((x,i)=>`${checked.has(i)?"✓":"○"} ${x}`).join("\n"):"—";
+    }
+    return `<div class="record-detail-field"><span>${safeText(f.label)}</span><strong>${safeText(prettyValue(value)||"—")}</strong></div>`;
+  }).join("");
+}
+function openRecordDetail(record){
+  const t=toolById(record.module),health=recordDueHealth(record);
+  $("recordDetailEyebrow").textContent=t.category.toUpperCase();
+  $("recordDetailTitle").textContent=record.title||"Untitled";
+  $("recordDetailSubtitle").textContent=t.name;
+  $("recordDetailHealth").textContent=health.label;
+  $("recordDetailHealth").className=`record-health-badge record-health ${health.key}`;
+  $("recordDetailMeta").innerHTML=`
+    <div><span>Status</span><strong>${safeText(record.status||"—")}</strong></div>
+    <div><span>${safeText(t.dueLabel)}</span><strong>${safeText(record.dueDate||"Not set")}</strong></div>
+    <div><span>Tool</span><strong>${safeText(t.name)}</strong></div>`;
+  $("recordDetailFields").innerHTML=recordDetailFieldRows(record);
+  $("recordDetailNotes").innerHTML=record.details?`<strong>Notes</strong><br>${safeText(record.details)}`:"No additional notes.";
+  const a=getRecordAction(record);
+  $("recordDetailActions").innerHTML=`
+    ${a?`<button class="btn btn-primary" data-detail-record-action="${a.key}" data-record-id="${record.id}">${safeText(a.label)}</button>`:""}
+    ${recurringNextButton(record).replaceAll("data-record-action=","data-detail-record-action=")}
+    <button class="btn btn-secondary" data-detail-edit="${record.id}">Edit</button>
+    <button class="btn btn-secondary" data-detail-duplicate="${record.id}">Duplicate</button>`;
+  document.querySelectorAll("[data-detail-record-action]").forEach(btn=>btn.onclick=async()=>{
+    $("recordDetailModal").classList.add("hidden");
+    await handleRecordQuickAction(records.find(r=>r.id===btn.dataset.recordId),btn.dataset.detailRecordAction);
+  });
+  document.querySelectorAll("[data-detail-edit]").forEach(btn=>btn.onclick=()=>{
+    $("recordDetailModal").classList.add("hidden");
+    openRecordModal(records.find(r=>r.id===btn.dataset.detailEdit));
+  });
+  document.querySelectorAll("[data-detail-duplicate]").forEach(btn=>btn.onclick=async()=>{
+    $("recordDetailModal").classList.add("hidden");
+    await duplicateRecord(records.find(r=>r.id===btn.dataset.detailDuplicate));
+  });
+  $("recordDetailModal").classList.remove("hidden");
+}
+function calculateSupplyStatus(fields){
+  const quantity=Number(fields.quantity);
+  const reorder=Number(fields.reorderLevel);
+  if(Number.isFinite(quantity)&&quantity<=0)return "Out of Stock";
+  if(Number.isFinite(quantity)&&Number.isFinite(reorder)&&quantity<=reorder)return "Low Stock";
+  return "In Stock";
+}
+async function handleRecordQuickAction(record,action){
+  if(!record)return;
+  const fields={...(record.fields||{})};
+  switch(action){
+    case "complete": return patchRecord(record,{status:"Complete"});
+    case "reopen": return patchRecord(record,{status:"Open"});
+    case "create_next_task":{
+      const nextDue=addPeriodToDate(record.dueDate,fields.recurring);
+      await addDoc(collection(db,"businesses",business.id,"records"),{
+        module:"tasks",title:record.title,status:"Open",dueDate:nextDue,details:record.details||"",
+        fields:{...fields},createdAt:serverTimestamp(),createdBy:currentUser.uid,
+        updatedAt:serverTimestamp(),updatedBy:currentUser.uid
+      });
+      await loadRecords();renderEverything();return;
+    }
+    case "run_checklist": return openChecklistRunner(record);
+    case "assign_equipment":{
+      const name=prompt("Assign this equipment to:");
+      if(!name)return;
+      fields.assignedTo=name.trim();
+      return patchRecord(record,{status:"Assigned",fields});
+    }
+    case "return_equipment":
+      fields.assignedTo="";
+      return patchRecord(record,{status:"Available",fields});
+    case "service_complete":
+      fields.lastService=todayDateInput();
+      return patchRecord(record,{status:"Complete",fields});
+    case "reschedule_maintenance":{
+      const next=prompt("Enter the next service date (YYYY-MM-DD):",record.dueDate||"");
+      if(!next)return;
+      return patchRecord(record,{status:"Scheduled",dueDate:next});
+    }
+    case "renew":{
+      const next=prompt("Enter the new expiration date (YYYY-MM-DD):",record.dueDate||"");
+      if(!next)return;
+      return patchRecord(record,{status:"Current",dueDate:next});
+    }
+    case "resolve": return patchRecord(record,{status:"Resolved"});
+    case "reopen_incident": return patchRecord(record,{status:"Open"});
+    case "acknowledge": return patchRecord(record,{status:"Acknowledged"});
+    case "resolve_handoff": return patchRecord(record,{status:"Resolved"});
+    case "reopen_handoff": return patchRecord(record,{status:"Open"});
+    case "return_asset":
+      fields.returnDate=todayDateInput();
+      if(!fields.conditionIn||fields.conditionIn==="Not Returned")fields.conditionIn="Good";
+      return patchRecord(record,{status:"Returned",fields});
+    case "checkout_again":
+      fields.returnDate="";fields.conditionIn="Not Returned";
+      return patchRecord(record,{status:"Checked Out",fields});
+    case "resolve_log": return patchRecord(record,{status:"Resolved"});
+    case "employee_leave": return patchRecord(record,{status:"On Leave"});
+    case "activate_employee": return patchRecord(record,{status:"Active"});
+    case "vehicle_service": return patchRecord(record,{status:"Needs Service"});
+    case "vehicle_active": return patchRecord(record,{status:"Active"});
+    case "approve_proof": return patchRecord(record,{status:"Approved"});
+    case "vendor_preferred": return patchRecord(record,{status:"Preferred"});
+    case "vendor_active": return patchRecord(record,{status:"Active"});
+    case "cancel_subscription":
+      if(confirm("Mark this business subscription/service as canceled?"))return patchRecord(record,{status:"Canceled"});
+      return;
+    case "activate_subscription": return patchRecord(record,{status:"Active"});
+    case "document_current": return patchRecord(record,{status:"Current"});
+    case "complete_training":
+      fields.completionDate=todayDateInput();
+      return patchRecord(record,{status:"Completed",fields});
+    case "open_website":{
+      const url=fields.url;
+      if(!url){alert("Add a website URL to this record first.");return;}
+      window.open(url,"_blank","noopener");
+      return;
+    }
+    case "open_qr_link":{
+      const url=fields.destinationUrl;
+      if(!url){alert("Add a destination URL first.");return;}
+      window.open(url,"_blank","noopener");
+      return;
+    }
+    case "copy_asset_id":{
+      const value=fields.assetId||record.title;
+      try{await navigator.clipboard.writeText(value);alert("Asset ID copied.");}
+      catch{prompt("Copy this asset ID:",value);}
+      return;
+    }
+    case "restock":{
+      const amount=prompt("How many units are you adding?","1");
+      if(amount===null)return;
+      const add=Number(amount);
+      if(!Number.isFinite(add)||add<=0){alert("Enter a valid quantity greater than 0.");return;}
+      const current=Number(fields.quantity)||0;
+      fields.quantity=String(current+add);
+      return patchRecord(record,{status:calculateSupplyStatus(fields),fields});
+    }
+    case "open_claim": return patchRecord(record,{status:"Claim Open"});
+    case "close_claim": return patchRecord(record,{status:"Active"});
+    case "resolve_complaint": return patchRecord(record,{status:"Resolved"});
+    case "reopen_complaint": return patchRecord(record,{status:"In Review"});
+    case "approve_suggestion": return patchRecord(record,{status:"Approved"});
+    case "implement_suggestion": return patchRecord(record,{status:"Implemented"});
+    case "checkout_visitor":
+      fields.departure=nowDateTimeInput();
+      return patchRecord(record,{status:"Checked Out",fields});
+    case "notify_recipient": return patchRecord(record,{status:"Recipient Notified"});
+    case "pickup_package":
+      fields.pickupDate=nowDateTimeInput();
+      if(!fields.pickedUpBy){
+        const who=prompt("Who picked up the package?","");
+        if(who!==null)fields.pickedUpBy=who.trim();
+      }
+      return patchRecord(record,{status:"Picked Up",fields});
+  }
+}
+function bindRecordActions(){
+  document.querySelectorAll("[data-edit-record]").forEach(btn=>btn.onclick=()=>openRecordModal(records.find(r=>r.id===btn.dataset.editRecord)));
+  document.querySelectorAll("[data-view-record]").forEach(btn=>btn.onclick=()=>openRecordDetail(records.find(r=>r.id===btn.dataset.viewRecord)));
+  document.querySelectorAll("[data-duplicate-record]").forEach(btn=>btn.onclick=async()=>duplicateRecord(records.find(r=>r.id===btn.dataset.duplicateRecord)));
+  document.querySelectorAll("[data-record-action]").forEach(btn=>btn.onclick=async()=>handleRecordQuickAction(records.find(r=>r.id===btn.dataset.recordId),btn.dataset.recordAction));
+  document.querySelectorAll("[data-delete-record]").forEach(btn=>btn.onclick=async()=>{
+    if(!confirm("Delete this record?"))return;
+    await deleteDoc(doc(db,"businesses",business.id,"records",btn.dataset.deleteRecord));
+    records=records.filter(r=>r.id!==btn.dataset.deleteRecord);
+    renderEverything();
+  });
+}
+$("recordSearch").addEventListener("input",renderRecords);
+$("recordModuleFilter").addEventListener("change",renderRecords);
+$("recordStatusFilter").addEventListener("change",renderRecords);
+$("recordDueFilter").addEventListener("change",renderRecords);
+$("exportRecordsBtn").addEventListener("click",exportRecordsCsv);
+
+document.querySelectorAll("[data-close-record-detail]").forEach(btn=>btn.addEventListener("click",()=>$("recordDetailModal").classList.add("hidden")));
+$("recordDetailModal").addEventListener("click",e=>{if(e.target===$("recordDetailModal"))$("recordDetailModal").classList.add("hidden")});
+document.querySelectorAll("[data-close-checklist-runner]").forEach(btn=>btn.addEventListener("click",()=>$("checklistRunnerModal").classList.add("hidden")));
+$("checklistRunnerModal").addEventListener("click",e=>{if(e.target===$("checklistRunnerModal"))$("checklistRunnerModal").classList.add("hidden")});
+$("saveChecklistProgressBtn").addEventListener("click",()=>saveChecklistProgress(false));
+$("resetChecklistBtn").addEventListener("click",()=>{document.querySelectorAll("[data-checklist-index]").forEach(cb=>cb.checked=false);updateChecklistProgressPreview();$("checklistRunnerMessage").textContent="Checklist reset. Save Progress to keep the reset.";});
 
 function fieldHtml(field,value=""){
   const attrs=`id="toolField_${field.key}" class="input" ${field.required?"required":""} ${field.step?`step="${field.step}"`:""} ${field.placeholder?`placeholder="${safeText(field.placeholder)}"`:""}`;
@@ -1263,7 +1746,13 @@ $("recordForm").addEventListener("submit",async e=>{
     }
     if(f.key==="title")title=value;else fields[f.key]=value;
   }
-  const payload={module:moduleId,title,status:$("recordStatus").value,dueDate:$("recordDueDate").value||"",details:$("recordDetails").value.trim(),fields,updatedAt:serverTimestamp(),updatedBy:currentUser.uid};
+  let smartStatus=$("recordStatus").value;
+  if(moduleId==="supplies") smartStatus=calculateSupplyStatus(fields);
+  if(moduleId==="visitor-log" && fields.departure) smartStatus="Checked Out";
+  if(moduleId==="package-log" && fields.pickupDate) smartStatus="Picked Up";
+  if(moduleId==="asset-checkout" && fields.returnDate) smartStatus="Returned";
+  if(moduleId==="training" && fields.completionDate && smartStatus==="Assigned") smartStatus="Completed";
+  const payload={module:moduleId,title,status:smartStatus,dueDate:$("recordDueDate").value||"",details:$("recordDetails").value.trim(),fields,updatedAt:serverTimestamp(),updatedBy:currentUser.uid};
   try{if(id)await updateDoc(doc(db,"businesses",business.id,"records",id),payload);else await addDoc(collection(db,"businesses",business.id,"records"),{...payload,createdAt:serverTimestamp(),createdBy:currentUser.uid});await loadRecords();renderEverything();recordModal.classList.add("hidden");}catch(error){console.error(error);$("recordMessage").textContent="Could not save this item. Check Firestore rules.";}
 });
 
