@@ -203,7 +203,28 @@
           <article class="panel monthly-records-panel"><div class="panel-heading"><div><small>MONTH RECORDS</small><h3 id="monthlyRecordTitle">Records</h3></div></div><div class="record-list" id="monthlyRecords"></div></article>
         </section>
         <section class="app-view hidden" id="toolsView"><article class="panel"><div class="panel-heading"><div><small>MODULES</small><h3>Choose Your Business Tools</h3></div></div><p class="panel-copy">Turn tools on or off. Disabled tools stay out of your dashboard without deleting their records.</p><div class="module-settings-grid" id="moduleSettingsGrid"></div></article></section>
-        <section class="app-view hidden" id="recordsView"><article class="panel"><div class="records-toolbar"><input class="input" type="search" id="recordSearch" placeholder="Search records..." /><select class="input" id="recordModuleFilter"><option value="all">All tools</option></select><button class="btn btn-primary" id="addRecordBtn">+ Add</button></div><div class="record-list" id="allRecords"></div></article></section>
+        <section class="app-view hidden" id="recordsView">
+          <article class="panel">
+            <div class="records-toolbar records-toolbar-advanced">
+              <input class="input" type="search" id="recordSearch" placeholder="Search records..." />
+              <select class="input" id="recordModuleFilter"><option value="all">All tools</option></select>
+              <select class="input" id="recordStatusFilter">
+                <option value="all">All statuses</option>
+              </select>
+              <select class="input" id="recordDueFilter">
+                <option value="all">Any date</option>
+                <option value="overdue">Overdue</option>
+                <option value="due_soon">Due next 7 days</option>
+                <option value="no_date">No due date</option>
+                <option value="completed">Completed / resolved</option>
+              </select>
+              <button class="btn btn-secondary" id="exportRecordsBtn" type="button">Export CSV</button>
+              <button class="btn btn-primary" id="addRecordBtn">+ Add</button>
+            </div>
+            <div class="records-summary" id="recordsSummary"></div>
+            <div class="record-list" id="allRecords"></div>
+          </article>
+        </section>
         <section class="app-view hidden" id="settingsView"><article class="panel settings-panel"><div class="panel-heading"><div><small>BUSINESS</small><h3>Business Settings</h3></div></div><form id="businessSettingsForm" class="form-grid"><label>Business Name<input class="input" id="settingsBusinessName" required /></label><label>Owner Name<input class="input" id="settingsOwnerName" /></label><label>Business Phone<input class="input" id="settingsPhone" type="tel" /></label><label>Business Website<input class="input" id="settingsWebsite" type="url" placeholder="https://" /></label><div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div></form></article></section>
       </div>
     </div>
@@ -564,6 +585,44 @@
       <form id="loginForm" class="auth-form"><span class="eyebrow">WELCOME BACK</span><h2 id="authTitle">Log in to your toolbox</h2><label>Email<input class="input" id="loginEmail" type="email" required autocomplete="email" /></label><label>Password<input class="input" id="loginPassword" type="password" required autocomplete="current-password" /></label><button class="btn btn-primary btn-large full" type="submit">Log In</button></form>
       <form id="signupForm" class="auth-form hidden"><span class="eyebrow">GET STARTED</span><h2>Create your business account</h2><label>Business Name<input class="input" id="signupBusinessName" required /></label><label>Your Name<input class="input" id="signupOwnerName" required /></label><label>Email<input class="input" id="signupEmail" type="email" required autocomplete="email" /></label><label>Password<input class="input" id="signupPassword" type="password" minlength="6" required autocomplete="new-password" /></label><button class="btn btn-primary btn-large full" type="submit">Create Account</button><small class="form-note">Authentication can be enabled when the account system is ready for testing.</small></form>
       <p class="form-message" id="authMessage"></p>
+    </div>
+  </div>
+
+
+  <div class="modal-backdrop hidden" id="recordDetailModal" role="dialog" aria-modal="true" aria-labelledby="recordDetailTitle">
+    <div class="modal record-detail-modal">
+      <button class="modal-close" data-close-record-detail aria-label="Close">×</button>
+      <div class="record-detail-head">
+        <div>
+          <span class="eyebrow" id="recordDetailEyebrow">BUSINESS TOOL</span>
+          <h2 id="recordDetailTitle">Record Details</h2>
+          <p id="recordDetailSubtitle"></p>
+        </div>
+        <span class="record-health-badge" id="recordDetailHealth">Current</span>
+      </div>
+      <div class="record-detail-meta" id="recordDetailMeta"></div>
+      <div class="record-detail-fields" id="recordDetailFields"></div>
+      <div class="record-detail-notes" id="recordDetailNotes"></div>
+      <div class="record-detail-actions" id="recordDetailActions"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="checklistRunnerModal" role="dialog" aria-modal="true" aria-labelledby="checklistRunnerTitle">
+    <div class="modal checklist-runner-modal">
+      <button class="modal-close" data-close-checklist-runner aria-label="Close">×</button>
+      <span class="eyebrow">CHECKLIST RUNNER</span>
+      <h2 id="checklistRunnerTitle">Run Checklist</h2>
+      <p class="modal-helper" id="checklistRunnerHelper"></p>
+      <div class="checklist-progress-wrap">
+        <div class="checklist-progress-text"><span id="checklistProgressText">0 of 0 complete</span><strong id="checklistProgressPercent">0%</strong></div>
+        <div class="checklist-progress-track"><div class="checklist-progress-bar" id="checklistProgressBar"></div></div>
+      </div>
+      <div class="checklist-runner-items" id="checklistRunnerItems"></div>
+      <div class="form-actions split">
+        <button class="btn btn-secondary" type="button" id="resetChecklistBtn">Reset</button>
+        <button class="btn btn-primary" type="button" id="saveChecklistProgressBtn">Save Progress</button>
+      </div>
+      <p class="form-message" id="checklistRunnerMessage"></p>
     </div>
   </div>
 
