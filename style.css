@@ -401,3 +401,72 @@ button,input,select,textarea{font:inherit} button{cursor:pointer} a{color:inheri
 
 /* RESTORED OWNER OVERVIEW SECTIONS */
 .owner-restored-panel{margin-top:18px}
+
+
+/* SMARTER BUSINESS TOOL FUNCTIONALITY */
+.records-toolbar-advanced{
+  display:grid;
+  grid-template-columns:minmax(180px,1.35fr) minmax(145px,.8fr) minmax(145px,.8fr) minmax(150px,.8fr) auto auto;
+  gap:9px;
+  align-items:center;
+}
+.records-summary{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:12px 0 15px;
+}
+.records-summary-chip{
+  padding:6px 9px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:#0d1c31;
+  color:var(--muted);
+  font-size:.7rem;
+}
+.records-summary-chip strong{color:#e5eef9}
+.record-health{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 8px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:.68rem;
+  font-weight:700;
+}
+.record-health.overdue{background:rgba(221,75,75,.12);border-color:rgba(221,75,75,.3);color:#ffb3b3}
+.record-health.soon{background:rgba(229,161,53,.12);border-color:rgba(229,161,53,.3);color:#ffd396}
+.record-health.complete{background:rgba(65,180,120,.1);border-color:rgba(65,180,120,.28);color:#b8f0d1}
+.record-health.current{background:#132744;color:#c8dcf6}
+.record-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end;align-items:flex-start}
+.record-action-primary{border-color:rgba(104,168,255,.38)!important;background:#102a4b!important}
+.record-action-success{border-color:rgba(61,179,116,.32)!important;background:rgba(61,179,116,.08)!important}
+.record-detail-modal{width:min(880px,100%);max-height:90vh;overflow:auto}
+.record-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding-right:35px}
+.record-detail-head h2{margin:6px 0 5px}
+.record-detail-head p{margin:0;color:var(--muted)}
+.record-health-badge{padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#10233d;font-size:.7rem;font-weight:700}
+.record-detail-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.record-detail-meta>div,.record-detail-field{padding:12px;border:1px solid var(--line);border-radius:10px;background:#0d1c31}
+.record-detail-meta span,.record-detail-field span{display:block;color:var(--muted);font-size:.68rem}
+.record-detail-meta strong,.record-detail-field strong{display:block;margin-top:5px;font-size:.8rem;word-break:break-word}
+.record-detail-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.record-detail-notes{margin-top:12px;padding:13px;border:1px solid var(--line);border-radius:10px;background:#0d1c31;color:#d4dfed;white-space:pre-wrap;line-height:1.5}
+.record-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.checklist-runner-modal{width:min(720px,100%);max-height:90vh;overflow:auto}
+.checklist-progress-wrap{margin:16px 0}
+.checklist-progress-text{display:flex;justify-content:space-between;color:var(--muted);font-size:.75rem;margin-bottom:7px}
+.checklist-progress-track{height:9px;border-radius:999px;background:#0c1a2c;border:1px solid var(--line);overflow:hidden}
+.checklist-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#2d70cc,#57a0ff);transition:width .2s ease}
+.checklist-runner-items{display:grid;gap:8px}
+.checklist-runner-item{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0d1c31}
+.checklist-runner-item input{margin-top:2px;accent-color:#5aa0ff}
+.checklist-runner-item span{line-height:1.4}
+@media(max-width:1050px){
+  .records-toolbar-advanced{grid-template-columns:1fr 1fr 1fr}
+}
+@media(max-width:700px){
+  .records-toolbar-advanced{grid-template-columns:1fr}
+  .record-detail-meta,.record-detail-fields{grid-template-columns:1fr}
+}
