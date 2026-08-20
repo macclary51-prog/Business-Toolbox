@@ -5,7 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc,
-  getDocs, deleteDoc, serverTimestamp, query, orderBy
+  getDocs, deleteDoc, serverTimestamp, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -441,6 +441,92 @@ const businessExamples = [
   {id:"cleaning",name:"Cleaning Service",tagline:"Manage checklists, supplies, proof of work and employee handoffs.",tools:["tasks","checklists","photo-proof","supplies","equipment","shift-handoff","incidents","asset-checkout"]}
 ];
 
+
+const defaultPlatformSite={
+  heroEyebrow:"ONE TOOLBOX. YOUR BUSINESS. YOUR TOOLS.",
+  heroTitle:"Keep everyday business operations organized.",
+  heroCopy:"Choose the tools your company actually needs. Track tasks, equipment, maintenance, renewals, incidents, handoffs, checklists and more from one simple dashboard.",
+  primaryCta:"Create Your Business Account",
+  secondaryCta:"Explore the Tools",
+  featuresTitle:"Find the tools that fit your business.",
+  featuresCopy:"Search the toolbox or filter by category. Select a tool to see exactly what it tracks.",
+  howTitle:"Simple enough to start in minutes."
+};
+const defaultPlatformPricing={
+  label:"BUSINESS TOOLBOX",
+  price:"$0.99",
+  period:"/ month",
+  title:"Useful business tools for 99¢ a month.",
+  copy:"One affordable toolbox with modules businesses can turn on and off as they need them.",
+  button:"Create Account",
+  note:"Subscription checkout can be connected after the website features are finished.",
+  features:["Business dashboard","Tool-specific business modules","Mobile-friendly website","Customizable active tools","Business data separated by account"]
+};
+const defaultPlatformSettings={
+  brandName:"Silverforge Business Toolbox",
+  tagline:"Simple tools for small businesses.",
+  companyName:"Silverforge Digital Solutions",
+  supportEmail:"",
+  supportPhone:"",
+  defaultPlan:"starter"
+};
+let platformSite={...defaultPlatformSite};
+let platformPricing={...defaultPlatformPricing};
+let platformSettings={...defaultPlatformSettings};
+let platformFeatureConfig={};
+
+function publicToolDefinition(tool){
+  const override=platformFeatureConfig?.[tool.id]||{};
+  return {...tool,desc:override.desc||tool.desc,publicVisible:override.visible!==false};
+}
+async function loadPlatformConfig(){
+  try{
+    const [siteSnap,pricingSnap,settingsSnap,featuresSnap]=await Promise.all([
+      getDoc(doc(db,"platformConfig","site")),
+      getDoc(doc(db,"platformConfig","pricing")),
+      getDoc(doc(db,"platformConfig","settings")),
+      getDoc(doc(db,"platformConfig","features"))
+    ]);
+    if(siteSnap.exists()) platformSite={...defaultPlatformSite,...siteSnap.data()};
+    if(pricingSnap.exists()){
+      const data=pricingSnap.data();
+      platformPricing={...defaultPlatformPricing,...data,features:Array.isArray(data.features)?data.features:defaultPlatformPricing.features};
+    }
+    if(settingsSnap.exists()) platformSettings={...defaultPlatformSettings,...settingsSnap.data()};
+    if(featuresSnap.exists()) platformFeatureConfig=featuresSnap.data().tools||{};
+  }catch(error){
+    console.warn("Platform config could not be loaded yet.",error);
+  }
+  applyPlatformConfig();
+}
+function applyPlatformConfig(){
+  if($("publicHeroEyebrow"))$("publicHeroEyebrow").textContent=platformSite.heroEyebrow;
+  if($("publicHeroTitle"))$("publicHeroTitle").textContent=platformSite.heroTitle;
+  if($("publicHeroCopy"))$("publicHeroCopy").textContent=platformSite.heroCopy;
+  if($("publicHeroPrimaryCta"))$("publicHeroPrimaryCta").textContent=platformSite.primaryCta;
+  if($("publicHeroSecondaryCta"))$("publicHeroSecondaryCta").textContent=platformSite.secondaryCta;
+  if($("publicFeaturesTitle"))$("publicFeaturesTitle").textContent=platformSite.featuresTitle;
+  if($("publicFeaturesCopy"))$("publicFeaturesCopy").textContent=platformSite.featuresCopy;
+  if($("publicHowTitle"))$("publicHowTitle").textContent=platformSite.howTitle;
+
+  if($("publicPricingTitle"))$("publicPricingTitle").textContent=platformPricing.title;
+  if($("publicPricingCopy"))$("publicPricingCopy").textContent=platformPricing.copy;
+  if($("publicPlanLabel"))$("publicPlanLabel").textContent=platformPricing.label;
+  if($("publicPlanPrice"))$("publicPlanPrice").textContent=platformPricing.price;
+  if($("publicPlanPeriod"))$("publicPlanPeriod").textContent=platformPricing.period;
+  if($("publicPricingCta"))$("publicPricingCta").textContent=platformPricing.button;
+  if($("publicPricingNote"))$("publicPricingNote").textContent=platformPricing.note;
+  if($("publicPlanFeatures"))$("publicPlanFeatures").innerHTML=(platformPricing.features||[]).map(x=>`<li>${safeText(x)}</li>`).join("");
+
+  if($("publicBrandName"))$("publicBrandName").textContent=platformSettings.brandName;
+  if($("publicFooterBrand"))$("publicFooterBrand").textContent=platformSettings.brandName;
+  if($("publicFooterTagline"))$("publicFooterTagline").textContent=platformSettings.tagline;
+  if($("publicFooterCompany"))$("publicFooterCompany").textContent=platformSettings.companyName;
+
+  renderPublicFeatures();
+  renderFeatureDetail();
+}
+
 function toolById(id){
   const base = toolDefinitions.find(t=>t.id===id);
   if(!base) return {id,name:id,icon:"•",category:"Other",desc:"Business record.",bullets:[],fields:[{key:"title",label:"Title",type:"text",required:true,wide:true}]};
@@ -462,17 +548,21 @@ function renderFeatureCategories(){
 }
 function renderPublicFeatures(){
   const q=publicSearch.trim().toLowerCase();
-  const filtered=toolDefinitions.filter(t=>(publicCategory==="All"||t.category===publicCategory)&&(!q||`${t.name} ${t.desc} ${t.category} ${(t.bullets||[]).join(" ")}`.toLowerCase().includes(q)));
+  const publicTools=toolDefinitions.map(publicToolDefinition).filter(t=>t.publicVisible);
+  const filtered=publicTools.filter(t=>(publicCategory==="All"||t.category===publicCategory)&&(!q||`${t.name} ${t.desc} ${t.category} ${(t.bullets||[]).join(" ")}`.toLowerCase().includes(q)));
+  if(!publicTools.some(t=>t.id===selectedPublicTool) && publicTools.length) selectedPublicTool=publicTools[0].id;
   $("publicFeatureGrid").innerHTML=filtered.length?filtered.map(t=>`<button class="feature-card ${t.id===selectedPublicTool?"active":""}" data-public-tool="${t.id}"><div class="feature-card-top"><span class="feature-icon">${safeText(t.icon)}</span><span class="feature-category">${safeText(t.category.toUpperCase())}</span></div><h3>${safeText(t.name)}</h3><p>${safeText(t.desc)}</p></button>`).join(""):'<div class="no-features">No tools match that search.</div>';
   document.querySelectorAll("[data-public-tool]").forEach(btn=>btn.onclick=()=>{selectedPublicTool=btn.dataset.publicTool;renderPublicFeatures();renderFeatureDetail();});
 }
 function renderFeatureDetail(){
-  const t=toolById(selectedPublicTool);
+  const base=toolDefinitions.find(t=>t.id===selectedPublicTool)||toolDefinitions[0];
+  const t=publicToolDefinition(base);
   $("detailIcon").textContent=t.icon; $("detailCategory").textContent=t.category.toUpperCase(); $("detailName").textContent=t.name; $("detailDescription").textContent=t.desc;
   $("detailBullets").innerHTML=(t.bullets||[]).map(b=>`<li>${safeText(b)}</li>`).join("");
 }
 $("featureSearch").addEventListener("input",e=>{publicSearch=e.target.value;renderPublicFeatures();});
 renderFeatureCategories(); renderPublicFeatures(); renderFeatureDetail();
+loadPlatformConfig();
 
 /* BUSINESS EXAMPLES */
 let selectedExample=businessExamples[0].id;
@@ -502,7 +592,7 @@ $("signupForm").addEventListener("submit",async e=>{
     const credential=await createUserWithEmailAndPassword(auth,email,password); const uid=credential.user.uid; const businessId=crypto.randomUUID?crypto.randomUUID():`${uid}-${Date.now()}`;
     await updateProfile(credential.user,{displayName:ownerName});
     await setDoc(doc(db,"users",uid),{displayName:ownerName,email,businessId,role:"owner",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-    await setDoc(doc(db,"businesses",businessId),{name:businessName,ownerUid:uid,ownerName,phone:"",website:"",enabledModules:defaultEnabledModules,plan:"starter",subscriptionStatus:"setup_required",platformStatus:"active",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    await setDoc(doc(db,"businesses",businessId),{name:businessName,ownerUid:uid,ownerName,phone:"",website:"",enabledModules:defaultEnabledModules,plan:platformSettings.defaultPlan||"starter",subscriptionStatus:"setup_required",platformStatus:"active",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     message.className="form-message success";message.textContent="Account created.";authModal.classList.add("hidden");
   }catch(error){console.error(error);message.textContent=friendlyAuthError(error.code);}
 });
@@ -518,7 +608,7 @@ onAuthStateChanged(auth,async user=>{
     if(adminSnap.exists() && adminSnap.data().active===true && adminSnap.data().role==="platform_owner"){
       currentPlatformAdmin={id:adminSnap.id,...adminSnap.data()};
       userProfile=null;business=null;records=[];
-      await loadOwnerBusinesses();
+      await Promise.all([loadOwnerBusinesses(),loadPlatformConfig()]);
       showOwnerApp();
       return;
     }
@@ -539,21 +629,32 @@ function showApp(){publicSite.classList.add("hidden");publicFooter.classList.add
 
 const ownerViews={
   overview:$("ownerOverviewView"),
-  platform:$("ownerPlatformView"),
-  subscriptions:$("ownerSubscriptionsView"),
   businesses:$("ownerBusinessesView"),
+  subscriptions:$("ownerSubscriptionsView"),
   tools:$("ownerToolsView"),
-  attention:$("ownerAttentionView")
+  homepage:$("ownerHomepageView"),
+  pricing:$("ownerPricingView"),
+  features:$("ownerFeaturesView"),
+  activity:$("ownerActivityView"),
+  reports:$("ownerReportsView"),
+  attention:$("ownerAttentionView"),
+  settings:$("ownerSettingsView")
 };
 function switchOwnerView(name){
   Object.entries(ownerViews).forEach(([key,el])=>el?.classList.toggle("hidden",key!==name));
   document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.ownerView===name));
+  if(name==="homepage")populateOwnerHomepageForm();
+  if(name==="pricing")populateOwnerPricingForm();
+  if(name==="features")renderOwnerFeatureManager();
+  if(name==="activity"&&!ownerActivityLoaded)loadOwnerActivity();
+  if(name==="reports")renderOwnerReports();
+  if(name==="settings")populateOwnerPlatformSettings();
 }
 document.querySelectorAll("[data-owner-view]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerView(btn.dataset.ownerView)));
 document.querySelectorAll("[data-owner-jump]").forEach(btn=>btn.addEventListener("click",()=>switchOwnerView(btn.dataset.ownerJump)));
 
 
-let ownerPreviewReturnView="platform";
+let ownerPreviewReturnView="overview";
 function ownerPreviewLabel(target){
   const labels={
     top:"Homepage",
@@ -567,7 +668,7 @@ function ownerPreviewLabel(target){
   return labels[target]||"Public Website";
 }
 function openOwnerPublicPreview(target="top",authMode=null){
-  ownerPreviewReturnView=document.querySelector("[data-owner-view].active")?.dataset.ownerView||"platform";
+  ownerPreviewReturnView=document.querySelector("[data-owner-view].active")?.dataset.ownerView||"overview";
   ownerShell.classList.add("hidden");
   appShell.classList.add("hidden");
   publicSite.classList.remove("hidden");
@@ -603,6 +704,254 @@ function returnToOwnerConsole(){
 $("returnToOwnerBtn").addEventListener("click",returnToOwnerConsole);
 document.querySelectorAll("[data-owner-public-preview]").forEach(btn=>btn.addEventListener("click",()=>openOwnerPublicPreview(btn.dataset.ownerPublicPreview)));
 document.querySelectorAll("[data-owner-auth-preview]").forEach(btn=>btn.addEventListener("click",()=>openOwnerPublicPreview("top",btn.dataset.ownerAuthPreview)));
+
+
+function setOwnerMessage(id,text,success=false){
+  const el=$(id); if(!el)return;
+  el.textContent=text||"";
+  el.className=`form-message${success?" success":""}`;
+}
+function populateOwnerHomepageForm(){
+  $("ownerHomeEyebrow").value=platformSite.heroEyebrow||"";
+  $("ownerHomeTitle").value=platformSite.heroTitle||"";
+  $("ownerHomeCopy").value=platformSite.heroCopy||"";
+  $("ownerHomePrimaryCta").value=platformSite.primaryCta||"";
+  $("ownerHomeSecondaryCta").value=platformSite.secondaryCta||"";
+  $("ownerHomeFeaturesTitle").value=platformSite.featuresTitle||"";
+  $("ownerHomeFeaturesCopy").value=platformSite.featuresCopy||"";
+  $("ownerHomeHowTitle").value=platformSite.howTitle||"";
+  renderOwnerHomepagePreview();
+}
+function renderOwnerHomepagePreview(){
+  $("ownerHomePreviewEyebrow").textContent=$("ownerHomeEyebrow").value||"—";
+  $("ownerHomePreviewTitle").textContent=$("ownerHomeTitle").value||"—";
+  $("ownerHomePreviewCopy").textContent=$("ownerHomeCopy").value||"—";
+  $("ownerHomePreviewPrimary").textContent=$("ownerHomePrimaryCta").value||"—";
+  $("ownerHomePreviewSecondary").textContent=$("ownerHomeSecondaryCta").value||"—";
+}
+["ownerHomeEyebrow","ownerHomeTitle","ownerHomeCopy","ownerHomePrimaryCta","ownerHomeSecondaryCta"].forEach(id=>$(id).addEventListener("input",renderOwnerHomepagePreview));
+$("ownerHomepageResetBtn").addEventListener("click",populateOwnerHomepageForm);
+$("ownerHomepageForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  setOwnerMessage("ownerHomepageMessage","Saving...");
+  const data={
+    heroEyebrow:$("ownerHomeEyebrow").value.trim(),
+    heroTitle:$("ownerHomeTitle").value.trim(),
+    heroCopy:$("ownerHomeCopy").value.trim(),
+    primaryCta:$("ownerHomePrimaryCta").value.trim(),
+    secondaryCta:$("ownerHomeSecondaryCta").value.trim(),
+    featuresTitle:$("ownerHomeFeaturesTitle").value.trim(),
+    featuresCopy:$("ownerHomeFeaturesCopy").value.trim(),
+    howTitle:$("ownerHomeHowTitle").value.trim(),
+    updatedAt:serverTimestamp(),
+    updatedBy:currentUser.uid
+  };
+  await setDoc(doc(db,"platformConfig","site"),data,{merge:true});
+  platformSite={...platformSite,...data};
+  applyPlatformConfig();
+  setOwnerMessage("ownerHomepageMessage","Homepage saved.",true);
+});
+
+function populateOwnerPricingForm(){
+  $("ownerPricingLabel").value=platformPricing.label||"";
+  $("ownerPricingPrice").value=platformPricing.price||"";
+  $("ownerPricingPeriod").value=platformPricing.period||"";
+  $("ownerPricingButton").value=platformPricing.button||"";
+  $("ownerPricingTitle").value=platformPricing.title||"";
+  $("ownerPricingCopy").value=platformPricing.copy||"";
+  $("ownerPricingFeatures").value=(platformPricing.features||[]).join("\n");
+  $("ownerPricingNote").value=platformPricing.note||"";
+  renderOwnerPricingPreview();
+}
+function renderOwnerPricingPreview(){
+  $("ownerPricingPreviewLabel").textContent=$("ownerPricingLabel").value||"—";
+  $("ownerPricingPreviewPrice").textContent=$("ownerPricingPrice").value||"—";
+  $("ownerPricingPreviewPeriod").textContent=$("ownerPricingPeriod").value||"";
+  $("ownerPricingPreviewTitle").textContent=$("ownerPricingTitle").value||"—";
+  $("ownerPricingPreviewCopy").textContent=$("ownerPricingCopy").value||"";
+  const features=$("ownerPricingFeatures").value.split("\n").map(x=>x.trim()).filter(Boolean);
+  $("ownerPricingPreviewFeatures").innerHTML=features.map(x=>`<li>${safeText(x)}</li>`).join("");
+}
+["ownerPricingLabel","ownerPricingPrice","ownerPricingPeriod","ownerPricingButton","ownerPricingTitle","ownerPricingCopy","ownerPricingFeatures","ownerPricingNote"].forEach(id=>$(id).addEventListener("input",renderOwnerPricingPreview));
+$("ownerPricingForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  setOwnerMessage("ownerPricingMessage","Saving...");
+  const data={
+    label:$("ownerPricingLabel").value.trim(),
+    price:$("ownerPricingPrice").value.trim(),
+    period:$("ownerPricingPeriod").value.trim(),
+    button:$("ownerPricingButton").value.trim(),
+    title:$("ownerPricingTitle").value.trim(),
+    copy:$("ownerPricingCopy").value.trim(),
+    features:$("ownerPricingFeatures").value.split("\n").map(x=>x.trim()).filter(Boolean),
+    note:$("ownerPricingNote").value.trim(),
+    updatedAt:serverTimestamp(),
+    updatedBy:currentUser.uid
+  };
+  await setDoc(doc(db,"platformConfig","pricing"),data,{merge:true});
+  platformPricing={...platformPricing,...data};
+  applyPlatformConfig();
+  renderOwnerDashboard();
+  setOwnerMessage("ownerPricingMessage","Pricing saved.",true);
+});
+
+function renderOwnerFeatureManager(){
+  const q=$("ownerFeatureManageSearch")?.value.trim().toLowerCase()||"";
+  const filtered=toolDefinitions.filter(t=>!q||`${t.name} ${t.category} ${t.desc}`.toLowerCase().includes(q));
+  $("ownerFeatureManageSummary").textContent=`${filtered.length} tool${filtered.length===1?"":"s"} shown`;
+  $("ownerFeatureManager").innerHTML=filtered.map(t=>{
+    const cfg=platformFeatureConfig[t.id]||{};
+    const visible=cfg.visible!==false;
+    const desc=cfg.desc||t.desc;
+    return `<div class="owner-feature-manage-row" data-feature-manage="${t.id}">
+      <label class="owner-feature-toggle"><input type="checkbox" data-feature-visible="${t.id}" ${visible?"checked":""}/> Public</label>
+      <div class="owner-feature-name"><strong>${safeText(t.icon)} ${safeText(t.name)}</strong><span>${safeText(t.category)}</span></div>
+      <textarea class="input owner-feature-desc" data-feature-desc="${t.id}" rows="3">${safeText(desc)}</textarea>
+    </div>`;
+  }).join("");
+}
+$("ownerFeatureManageSearch").addEventListener("input",renderOwnerFeatureManager);
+$("ownerSaveFeaturesBtn").addEventListener("click",async()=>{
+  setOwnerMessage("ownerFeaturesMessage","Saving...");
+  const tools={...platformFeatureConfig};
+  toolDefinitions.forEach(t=>{
+    const visibleEl=document.querySelector(`[data-feature-visible="${t.id}"]`);
+    const descEl=document.querySelector(`[data-feature-desc="${t.id}"]`);
+    if(visibleEl||descEl){
+      tools[t.id]={
+        visible:visibleEl?visibleEl.checked:(tools[t.id]?.visible!==false),
+        desc:descEl?descEl.value.trim():(tools[t.id]?.desc||t.desc)
+      };
+    }
+  });
+  await setDoc(doc(db,"platformConfig","features"),{tools,updatedAt:serverTimestamp(),updatedBy:currentUser.uid},{merge:true});
+  platformFeatureConfig=tools;
+  applyPlatformConfig();
+  setOwnerMessage("ownerFeaturesMessage","Feature settings saved.",true);
+});
+
+let ownerActivity=[],ownerActivityLoaded=false;
+async function loadOwnerActivity(){
+  ownerActivityLoaded=true;
+  $("ownerActivityList").innerHTML='<div class="empty-state">Loading recent customer activity...</div>';
+  try{
+    const batches=await Promise.all(ownerBusinesses.map(async b=>{
+      try{
+        const snap=await getDocs(query(collection(db,"businesses",b.id,"records"),orderBy("updatedAt","desc"),limit(20)));
+        return snap.docs.map(d=>({id:d.id,businessId:b.id,businessName:b.name||"Unnamed Business",...d.data()}));
+      }catch(error){
+        console.warn("Could not load activity for",b.id,error);
+        return [];
+      }
+    }));
+    ownerActivity=batches.flat().sort((a,b)=>(ownerDate(b.updatedAt)?.getTime()||0)-(ownerDate(a.updatedAt)?.getTime()||0)).slice(0,250);
+    renderOwnerActivity();
+  }catch(error){
+    console.error(error);
+    $("ownerActivityList").innerHTML='<div class="empty-state">Activity could not be loaded.</div>';
+  }
+}
+function renderOwnerActivity(){
+  const q=$("ownerActivitySearch").value.trim().toLowerCase();
+  const toolFilter=$("ownerActivityToolFilter").value;
+  const filtered=ownerActivity.filter(a=>{
+    const t=toolById(a.module);
+    return (!q||`${a.businessName} ${a.title||""} ${a.status||""} ${t.name}`.toLowerCase().includes(q))
+      &&(toolFilter==="all"||a.module===toolFilter);
+  });
+  const businessCount=new Set(ownerActivity.map(a=>a.businessId)).size;
+  const tools=new Set(ownerActivity.map(a=>a.module).filter(Boolean));
+  $("ownerActivityCount").textContent=ownerActivity.length;
+  $("ownerActivityBusinesses").textContent=businessCount;
+  $("ownerActivityTools").textContent=tools.size;
+  $("ownerActivityLast").textContent=ownerActivity.length?formatOwnerDate(ownerActivity[0].updatedAt):"—";
+  $("ownerActivityList").innerHTML=filtered.length?filtered.map(a=>{
+    const t=toolById(a.module);
+    return `<div class="owner-activity-row">
+      <div><strong>${safeText(a.businessName)} — ${safeText(a.title||"Untitled")}</strong><span>${safeText(t.name)} • ${safeText(a.status||"No status")}</span></div>
+      <div class="owner-activity-time">${safeText(formatOwnerDate(a.updatedAt))}</div>
+    </div>`;
+  }).join(""):'<div class="empty-state">No activity matches the current filters.</div>';
+}
+$("ownerActivityRefreshBtn").addEventListener("click",()=>{ownerActivityLoaded=false;loadOwnerActivity()});
+$("ownerActivitySearch").addEventListener("input",renderOwnerActivity);
+$("ownerActivityToolFilter").innerHTML=`<option value="all">All tools</option>${toolDefinitions.map(t=>`<option value="${t.id}">${safeText(t.name)}</option>`).join("")}`;
+$("ownerActivityToolFilter").addEventListener("change",renderOwnerActivity);
+
+function renderOwnerReports(){
+  const now=new Date(),months=[];
+  for(let offset=5;offset>=0;offset--){
+    const d=new Date(now.getFullYear(),now.getMonth()-offset,1),key=ownerMonthKey(d);
+    months.push({label:d.toLocaleDateString(undefined,{month:"short"}),count:ownerBusinesses.filter(b=>{const created=ownerDate(b.createdAt);return created&&ownerMonthKey(created)===key}).length});
+  }
+  const max=Math.max(1,...months.map(x=>x.count));
+  $("ownerReportsGrowthChart").innerHTML=months.map(m=>`<div class="owner-growth-column"><div class="owner-growth-bar-wrap"><div class="owner-growth-bar" style="height:${Math.max(4,Math.round(m.count/max*120))}px"></div></div><strong>${m.count}</strong><span>${safeText(m.label)}</span></div>`).join("");
+
+  const subStatuses=["active","setup_required","past_due","canceled"];
+  $("ownerReportsSubscriptions").innerHTML=subStatuses.map(s=>{
+    const count=ownerBusinesses.filter(b=>(b.subscriptionStatus||"setup_required")===s).length;
+    return `<div class="owner-report-row"><strong>${safeText(s.replaceAll("_"," "))}</strong><span>${count}</span></div>`;
+  }).join("");
+
+  const toolRows=toolDefinitions.map(t=>({tool:t,count:ownerBusinesses.filter(b=>Array.isArray(b.enabledModules)&&b.enabledModules.includes(t.id)).length}))
+    .sort((a,b)=>b.count-a.count).slice(0,12);
+  $("ownerReportsTools").innerHTML=toolRows.map(({tool,count})=>{
+    const pct=ownerBusinesses.length?Math.round(count/ownerBusinesses.length*100):0;
+    return `<div class="owner-report-tool-row"><strong>${safeText(tool.name)}</strong><span>${count} businesses</span><span>${pct}%</span></div>`;
+  }).join("");
+
+  const health=[
+    ["Active access",ownerBusinesses.filter(b=>(b.platformStatus||"active")==="active").length],
+    ["Suspended",ownerBusinesses.filter(b=>(b.platformStatus||"active")==="suspended").length],
+    ["Needs attention",ownerBusinesses.filter(b=>businessAttentionReasons(b).length).length],
+    ["Complete contact info",ownerBusinesses.filter(b=>b.ownerName&&(b.phone||b.website)).length]
+  ];
+  $("ownerReportsHealth").innerHTML=health.map(([label,count])=>`<div class="owner-report-row"><strong>${safeText(label)}</strong><span>${count}</span></div>`).join("");
+}
+function ownerCsvEscape(value){
+  const s=String(value??"").replaceAll("\r"," ").replaceAll("\n"," ");
+  return `"${s.replaceAll('"','""')}"`;
+}
+$("ownerExportCustomersBtn").addEventListener("click",()=>{
+  if(!ownerBusinesses.length){alert("No customer businesses to export.");return;}
+  const header=["Business","Owner","Email/Owner UID","Phone","Website","Plan","Subscription","Access","Tools Enabled","Created"];
+  const lines=[header.map(ownerCsvEscape).join(",")];
+  ownerBusinesses.forEach(b=>lines.push([
+    b.name||"",b.ownerName||"",b.ownerUid||"",b.phone||"",b.website||"",b.plan||"starter",
+    b.subscriptionStatus||"setup_required",b.platformStatus||"active",
+    Array.isArray(b.enabledModules)?b.enabledModules.length:0,formatOwnerDate(b.createdAt)
+  ].map(ownerCsvEscape).join(",")));
+  const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="silverforge-business-toolbox-customers.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+});
+
+function populateOwnerPlatformSettings(){
+  $("ownerPlatformBrandName").value=platformSettings.brandName||"";
+  $("ownerPlatformTagline").value=platformSettings.tagline||"";
+  $("ownerPlatformCompany").value=platformSettings.companyName||"";
+  $("ownerPlatformSupportEmail").value=platformSettings.supportEmail||"";
+  $("ownerPlatformSupportPhone").value=platformSettings.supportPhone||"";
+  $("ownerPlatformDefaultPlan").value=platformSettings.defaultPlan||"starter";
+}
+$("ownerPlatformSettingsForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  setOwnerMessage("ownerPlatformSettingsMessage","Saving...");
+  const data={
+    brandName:$("ownerPlatformBrandName").value.trim(),
+    tagline:$("ownerPlatformTagline").value.trim(),
+    companyName:$("ownerPlatformCompany").value.trim(),
+    supportEmail:$("ownerPlatformSupportEmail").value.trim(),
+    supportPhone:$("ownerPlatformSupportPhone").value.trim(),
+    defaultPlan:$("ownerPlatformDefaultPlan").value.trim()||"starter",
+    updatedAt:serverTimestamp(),
+    updatedBy:currentUser.uid
+  };
+  await setDoc(doc(db,"platformConfig","settings"),data,{merge:true});
+  platformSettings={...platformSettings,...data};
+  applyPlatformConfig();
+  setOwnerMessage("ownerPlatformSettingsMessage","Platform settings saved.",true);
+});
 
 function ownerMonthKey(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}`;
@@ -832,6 +1181,7 @@ function renderOwnerDashboard(){
   $("ownerRevenueCurrent").textContent=`$${mrr.toFixed(2)}`;
   renderOwnerGrowthChart();
   renderOwnerSubscriptions();
+  renderOwnerReports();
   renderOwnerTopTools();
   renderOwnerNewestBusinesses();
   renderOwnerAttention();
