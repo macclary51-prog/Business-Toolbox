@@ -124,13 +124,14 @@
   <section class="app-shell hidden" id="appShell">
     <aside class="sidebar" id="sidebar">
       <a class="brand sidebar-brand" href="#"><span class="brand-mark">SF</span><span class="brand-text">Business <strong>Toolbox</strong></span></a>
-      <div class="business-block"><small>BUSINESS</small><strong id="sidebarBusinessName">Loading...</strong><span id="sidebarUserEmail"></span></div>
+      <div class="business-block"><small>BUSINESS</small><strong id="sidebarBusinessName">Loading...</strong><span id="sidebarUserEmail"></span><span class="sidebar-role" id="sidebarUserRole"></span></div>
       <nav class="sidebar-nav">
         <button class="side-link active" data-view="dashboard"><span>⌂</span> Dashboard</button>
-        <button class="side-link" data-view="monthly"><span>◫</span> Monthly Overview</button>
-        <button class="side-link" data-view="tools"><span>▦</span> Tools</button>
+        <button class="side-link" data-view="monthly" id="monthlyNavBtn"><span>◫</span> Monthly Overview</button>
+        <button class="side-link" data-view="tools" data-business-owner-only><span>▦</span> Tools</button>
         <button class="side-link" data-view="records"><span>☰</span> All Records</button>
-        <button class="side-link" data-view="settings"><span>⚙</span> Settings</button>
+        <button class="side-link" data-view="employees" data-business-owner-only><span>♙</span> Employee Accounts</button>
+        <button class="side-link" data-view="settings" data-business-owner-only><span>⚙</span> Settings</button>
       </nav>
       <button class="btn btn-ghost sidebar-logout" id="logoutBtn">Log Out</button>
     </aside>
@@ -225,6 +226,37 @@
             <div class="record-list" id="allRecords"></div>
           </article>
         </section>
+        <section class="app-view hidden" id="employeesView" data-business-owner-only>
+          <div class="employee-page-heading">
+            <div>
+              <small>TEAM ACCESS</small>
+              <h2>Employee Accounts</h2>
+              <p>Create employee logins for this business and control exactly what each employee is allowed to use.</p>
+            </div>
+            <button class="btn btn-primary" id="addEmployeeBtn" type="button">+ Add Employee</button>
+          </div>
+
+          <div class="stats-grid employee-stats">
+            <article class="stat-card"><span>Total Employees</span><strong id="employeeStatTotal">0</strong></article>
+            <article class="stat-card"><span>Active Accounts</span><strong id="employeeStatActive">0</strong></article>
+            <article class="stat-card"><span>Inactive Accounts</span><strong id="employeeStatInactive">0</strong></article>
+            <article class="stat-card"><span>Tool Access</span><strong id="employeeStatToolAccess">0</strong><small>Average tools per employee</small></article>
+          </div>
+
+          <article class="panel">
+            <div class="panel-heading owner-panel-heading">
+              <div>
+                <small>BUSINESS TEAM</small>
+                <h3>Employee Login Accounts</h3>
+                <p class="owner-result-count" id="employeeResultCount">0 employees</p>
+              </div>
+              <input class="input owner-search" id="employeeSearch" type="search" placeholder="Search name, email or job title..." />
+            </div>
+            <p class="panel-copy">Employees use the same public Login screen as the business owner. Deactivating an employee immediately blocks their Firestore access.</p>
+            <div class="employee-account-list" id="employeeAccountList"></div>
+          </article>
+        </section>
+
         <section class="app-view hidden" id="settingsView"><article class="panel settings-panel"><div class="panel-heading"><div><small>BUSINESS</small><h3>Business Settings</h3></div></div><form id="businessSettingsForm" class="form-grid"><label>Business Name<input class="input" id="settingsBusinessName" required /></label><label>Owner Name<input class="input" id="settingsOwnerName" /></label><label>Business Phone<input class="input" id="settingsPhone" type="tel" /></label><label>Business Website<input class="input" id="settingsWebsite" type="url" placeholder="https://" /></label><div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div></form></article></section>
       </div>
     </div>
@@ -892,6 +924,64 @@
     </div>
   </div>
 
+
+  <div class="modal-backdrop hidden" id="employeeModal" role="dialog" aria-modal="true" aria-labelledby="employeeModalTitle">
+    <div class="modal employee-modal">
+      <button class="modal-close" data-close-employee aria-label="Close">×</button>
+      <span class="eyebrow">BUSINESS TEAM ACCESS</span>
+      <h2 id="employeeModalTitle">Add Employee</h2>
+      <p class="modal-helper" id="employeeModalHelper">Create a login and choose what this employee can access.</p>
+
+      <form id="employeeForm">
+        <input type="hidden" id="employeeUid" />
+        <div class="form-grid">
+          <label>Employee Name
+            <input class="input" id="employeeName" required maxlength="100" />
+          </label>
+          <label>Job Title / Role
+            <input class="input" id="employeeJobTitle" maxlength="100" placeholder="Crew Member, Office Manager..." />
+          </label>
+          <label>Email
+            <input class="input" id="employeeEmail" type="email" required />
+          </label>
+          <label id="employeePasswordLabel">Temporary Password
+            <input class="input" id="employeePassword" type="password" minlength="6" autocomplete="new-password" />
+            <span class="field-help">At least 6 characters. The employee can later use password reset.</span>
+          </label>
+        </div>
+
+        <div class="employee-permissions-section">
+          <div class="owner-detail-section-heading">
+            <div><small>PERMISSIONS</small><h3>What Can This Employee Do?</h3></div>
+          </div>
+          <div class="employee-permission-grid">
+            <label class="employee-permission"><input type="checkbox" id="employeeCanCreate" checked /><span><strong>Create Records</strong><small>Add new tasks, logs, maintenance items and other records.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="employeeCanEdit" checked /><span><strong>Edit Records</strong><small>Edit records and use tool actions such as Complete, Restock or Check Out.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="employeeCanDelete" /><span><strong>Delete Records</strong><small>Permanently delete business records they can access.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="employeeCanMonthly" checked /><span><strong>Monthly Overview</strong><small>View monthly business history, costs, KPIs and trends.</small></span></label>
+            <label class="employee-permission"><input type="checkbox" id="employeeCanExport" /><span><strong>Export CSV</strong><small>Download accessible business records as a CSV file.</small></span></label>
+          </div>
+        </div>
+
+        <div class="employee-tools-section">
+          <div class="owner-detail-section-heading">
+            <div><small>TOOLS</small><h3>Allowed Business Tools</h3></div>
+            <div class="employee-tool-actions">
+              <button class="mini-btn" id="employeeSelectAllTools" type="button">Select All</button>
+              <button class="mini-btn" id="employeeClearTools" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="employee-tool-access-grid" id="employeeToolAccessGrid"></div>
+        </div>
+
+        <div class="form-actions split">
+          <button class="btn btn-secondary hidden" id="employeeResetPasswordBtn" type="button">Send Password Reset</button>
+          <button class="btn btn-primary" type="submit" id="employeeSaveBtn">Create Employee</button>
+        </div>
+        <p class="form-message" id="employeeMessage"></p>
+      </form>
+    </div>
+  </div>
 
   <div class="modal-backdrop hidden" id="recordDetailModal" role="dialog" aria-modal="true" aria-labelledby="recordDetailTitle">
     <div class="modal record-detail-modal">
